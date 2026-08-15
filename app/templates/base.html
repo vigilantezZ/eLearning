@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BMP Tryout & IRT Engine{% endblock %}</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+  
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- MathJax for rendering formulas if needed -->
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- Core Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+  <!-- Main Navigation Bar -->
+  {% block navbar %}
+  <nav class="main-navbar">
+    <div class="nav-container">
+      <a href="{{ url_for('exam.catalog') }}" class="nav-brand">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Beasiswa Muda Purbalingga" style="height: 42px; width: 42px; object-fit: contain;">
+        <div style="display: flex; flex-direction: column; line-height: 1.15;">
+          <span style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px;">BMP <span style="color: var(--primary-500);">Tryout</span></span>
+          <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px;">Beasiswa Muda Purbalingga</span>
+        </div>
+      </a>
+
+      <ul class="nav-menu">
+        <li>
+          <a href="{{ url_for('exam.catalog') }}" class="nav-link {% if request.endpoint == 'exam.catalog' %}active{% endif %}">
+            <i class="fas fa-book-open"></i> Katalog Tryout
+          </a>
+        </li>
+
+        {% if current_user.is_authenticated %}
+          {% if current_user.is_supervisor or current_user.is_admin %}
+            <li>
+              <a href="{{ url_for('supervisor.dashboard') }}" class="nav-link {% if 'supervisor' in request.endpoint %}active{% endif %}">
+                <i class="fas fa-chalkboard-teacher"></i> Portal SPV
+              </a>
+            </li>
+          {% endif %}
+
+          {% if current_user.is_admin %}
+            <li>
+              <a href="{{ url_for('admin.dashboard') }}" class="nav-link {% if 'admin' in request.endpoint %}active{% endif %}">
+                <i class="fas fa-user-shield"></i> Panel Admin
+              </a>
+            </li>
+          {% endif %}
+        {% endif %}
+      </ul>
+
+      <div class="user-profile-menu">
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('auth.profile') }}" style="display: flex; align-items: center; gap: 0.6rem; color: var(--text-main);">
+            <img src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}" class="user-avatar-sm">
+            <div>
+              <div style="font-weight: 700; font-size: 0.875rem; line-height: 1.2;">{{ current_user.full_name }}</div>
+              <span class="badge badge-{% if current_user.is_admin %}primary{% elif current_user.is_supervisor %}warning{% else %}success{% endif %}">
+                {{ current_user.role }}
+              </span>
+            </div>
+          </a>
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" title="Logout" style="margin-left: 0.5rem;">
+            <i class="fas fa-sign-out-alt"></i>
+          </a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm">Masuk</a>
+          <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Daftar Akun</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+  {% endblock navbar %}
+
+  <!-- Main Body Content -->
+  <main class="main-content">
+    <div class="container">
+      <!-- Flash Alert Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="alert-container">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">
+                <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+                <span>{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 Beasiswa Muda Purbalingga (BMP) &bull; Platform CBT Tryout & Penilaian IRT Terstandar UTBK-SNBT.</p>
+    </div>
+  </footer>
+
+  {% block extra_js %}{% endblock %}
+
+  {% if current_user.is_authenticated %}
+  <!-- Inactivity Auto-Logout Tracker (30 Menit) -->
+  <script>
+    (function() {
+      const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 Menit
+      let idleTimer = null;
+
+      function resetIdleTimer() {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          window.location.href = "{{ url_for('auth.logout') }}?reason=timeout";
+        }, IDLE_TIMEOUT_MS);
+      }
+
+      const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+      events.forEach(event => {
+        window.addEventListener(event, resetIdleTimer, { passive: true });
+      });
+
+      resetIdleTimer();
+    })();
+  </script>
+  {% endif %}
+</body>
+</html>

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{% if user %}Edit Pengguna: {{ user.username }}{% else %}Tambah Pengguna Baru{% endif %} - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 1rem auto 2rem auto;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-user-cog" style="color: var(--primary-600);"></i> {% if user %}Edit Akun Pengguna{% else %}Tambah Akun Pengguna Baru{% endif %}
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Kelola detail akun, peran (Admin, Supervisor, Peserta), dan kredensial akses.</p>
+    </div>
+    <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Kembali
+    </a>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" class="card" style="padding: 2rem;">
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label" for="username">Username <span style="color: var(--danger-500);">*</span></label>
+        <input type="text" id="username" name="username" class="form-control" value="{{ user.username if user else '' }}" {% if user %}disabled{% endif %} required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email <span style="color: var(--danger-500);">*</span></label>
+        <input type="email" id="email" name="email" class="form-control" value="{{ user.email if user else '' }}" {% if user %}disabled{% endif %} required>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label" for="full_name">Nama Lengkap <span style="color: var(--danger-500);">*</span></label>
+        <input type="text" id="full_name" name="full_name" class="form-control" value="{{ user.full_name if user else '' }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="role">Hak Akses / Peran (Role) <span style="color: var(--danger-500);">*</span></label>
+        <select id="role" name="role" class="form-control" required>
+          <option value="peserta" {% if user and user.role == 'peserta' %}selected{% endif %}>Peserta (Hanya Mengerjakan Soal)</option>
+          <option value="supervisor" {% if user and user.role == 'supervisor' %}selected{% endif %}>Supervisor (Bank Soal & Jawaban)</option>
+          <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Administrator (Full Access)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label" for="phone">No. HP / WhatsApp</label>
+        <input type="tel" id="phone" name="phone" class="form-control" value="{{ user.phone if user else '' }}">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="school">Asal Sekolah</label>
+        <input type="text" id="school" name="school" class="form-control" value="{{ user.school if user else '' }}">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label" for="grade">Kelas / Jenjang</label>
+        <input type="text" id="grade" name="grade" class="form-control" value="{{ user.grade if user else '' }}" placeholder="contoh: 12 SMA / SMK">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="photo">Foto Diri (Opsional)</label>
+        <input type="file" id="photo" name="photo" class="form-control" accept="image/*">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top: 1rem; padding-top: 1.25rem; border-top: 1px solid var(--light-200);">
+      <label class="form-label" for="password">
+        {% if user %}Reset Password (Kosongkan jika tidak ingin diubah){% else %}Password Akun <span style="color: var(--danger-500);">*</span>{% endif %}
+      </label>
+      <input type="password" id="password" name="password" class="form-control" placeholder="Minimal 6 karakter" {% if not user %}required{% endif %}>
+    </div>
+
+    <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+      <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Batal</a>
+      <button type="submit" class="btn btn-primary btn-lg">
+        <i class="fas fa-save"></i> {% if user %}Simpan Perubahan{% else %}Buat Pengguna{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

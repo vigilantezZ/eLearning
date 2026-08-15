@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Profil Pengguna - BMP Tryout{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 1.5rem auto;">
+  <div class="card" style="padding: 2rem;">
+    <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--light-200);">
+      <img src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-500); box-shadow: 0 4px 12px rgba(79,70,229,0.2);">
+      <div>
+        <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.2rem;">{{ current_user.full_name }}</h2>
+        <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--text-muted);">
+          <span><i class="fas fa-at"></i> {{ current_user.username }}</span>
+          <span>•</span>
+          <span class="badge badge-{% if current_user.is_admin %}primary{% elif current_user.is_supervisor %}warning{% else %}success{% endif %}">
+            {{ current_user.role }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data">
+      <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-700); margin-bottom: 1rem;">
+        <i class="fas fa-id-card"></i> Informasi Identitas
+      </h4>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label" for="full_name">Nama Lengkap</label>
+          <input type="text" id="full_name" name="full_name" class="form-control" value="{{ current_user.full_name }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="phone">No. WhatsApp / HP</label>
+          <input type="tel" id="phone" name="phone" class="form-control" value="{{ current_user.phone or '' }}">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label" for="school">Asal Sekolah</label>
+          <input type="text" id="school" name="school" class="form-control" value="{{ current_user.school or '' }}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="grade">Kelas / Jenjang</label>
+          <input type="text" id="grade" name="grade" class="form-control" value="{{ current_user.grade or '' }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="photo">Ganti Foto Diri</label>
+        <input type="file" id="photo" name="photo" class="form-control" accept="image/*">
+      </div>
+
+      <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-700); margin: 2rem 0 1rem 0; padding-top: 1.5rem; border-top: 1px solid var(--light-200);">
+        <i class="fas fa-lock"></i> Ganti Password (Opsional)
+      </h4>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label" for="new_password">Password Baru</label>
+          <input type="password" id="new_password" name="new_password" class="form-control" placeholder="Kosongkan jika tidak ingin diubah">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirm_password">Konfirmasi Password Baru</label>
+          <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Ulangi password baru">
+        </div>
+      </div>
+
+      <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="fas fa-save"></i> Simpan Perubahan Profil
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Katalog Simulasi Tryout CBT - BMP Tryout{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="card glass-card" style="margin-bottom: 2.5rem; padding: 3rem 2.5rem; background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(240,245,255,0.85)); border-left: 6px solid var(--primary-600);">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 2rem;">
+    <div style="max-width: 680px;">
+      <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--primary-100); color: var(--primary-800); padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.825rem; font-weight: 700; margin-bottom: 1rem;">
+        <i class="fas fa-certificate"></i> Standar Simulasi SNBT & UTBK 2026
+      </div>
+      <h1 style="font-size: 2.3rem; font-weight: 800; color: var(--text-main); line-height: 1.25; margin-bottom: 0.75rem; letter-spacing: -0.5px;">
+        Platform Tryout CBT & Penilaian <span style="color: var(--primary-600);">Item Response Theory (IRT)</span>
+      </h1>
+      <p style="color: var(--text-muted); font-size: 1.05rem; line-height: 1.6;">
+        Uji kesiapan akademik Anda dengan sistem Computer Based Test modern, timer per subtes independen, 3 variasi tipe soal, dan pembobotan skor IRT standar nasional.
+      </p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; min-width: 220px;">
+      <div style="background: white; border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 0.85rem 1.25rem; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fas fa-layer-group" style="font-size: 1.5rem; color: var(--primary-600);"></i>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Hierarki Soal</div>
+          <div style="font-weight: 800; font-size: 0.95rem;">3-Tier (T1 - T3)</div>
+        </div>
+      </div>
+
+      <div style="background: white; border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 0.85rem 1.25rem; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fas fa-stopwatch" style="font-size: 1.5rem; color: var(--accent-500);"></i>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Sistem Timer</div>
+          <div style="font-weight: 800; font-size: 0.95rem;">Timer Mandiri per Subtes</div>
+        </div>
+      </div>
+
+      <div style="background: white; border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 0.85rem 1.25rem; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fas fa-chart-line" style="font-size: 1.5rem; color: var(--success-500);"></i>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Model Penilaian</div>
+          <div style="font-weight: 800; font-size: 0.95rem;">IRT 2PL / 3PL SNBT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Package Grid Section -->
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+  <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">
+    <i class="fas fa-book-open" style="color: var(--primary-600);"></i> Paket Tryout Tersedia
+  </h2>
+  <span style="font-size: 0.9rem; color: var(--text-muted);">Ditemukan <b>{{ packages|length }}</b> paket aktif</span>
+</div>
+
+<div class="grid-3" style="margin-bottom: 3rem;">
+  {% for pkg in packages %}
+  {% set session = user_sessions.get(pkg.id) if user_sessions else None %}
+  <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--primary-600); position: relative;">
+    <div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+        <span class="badge badge-primary">UTBK SIMULASI</span>
+        {% if session %}
+          {% if session.status == 'completed' %}
+            <span class="badge badge-success"><i class="fas fa-check-circle"></i> Selesai</span>
+          {% else %}
+            <span class="badge badge-warning"><i class="fas fa-spinner fa-spin"></i> Sedang Dikerjakan</span>
+          {% endif %}
+        {% else %}
+          <span class="badge badge-neutral">Belum Dikerjakan</span>
+        {% endif %}
+      </div>
+
+      <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">
+        {{ pkg.title }}
+      </h3>
+
+      <p style="color: var(--text-muted); font-size: 0.875rem; line-height: 1.5; margin-bottom: 1.25rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+        {{ pkg.description or 'Simulasi ujian lengkap mencakup Tes Potensi Skolastik dan Literasi dengan sistem timer otomatis.' }}
+      </p>
+
+      <!-- Subtest summary pills -->
+      <div style="background: var(--light-50); border: 1px solid var(--light-200); border-radius: var(--radius-sm); padding: 0.75rem; margin-bottom: 1.25rem; font-size: 0.8rem;">
+        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.3rem;">
+          <i class="fas fa-layer-group"></i> {{ pkg.package_subtests|length }} Subtes diujikan:
+        </div>
+        <div style="color: var(--text-muted);">
+          {% for ts in pkg.package_subtests[:3] %}
+            {{ ts.subtest.name }}{% if not loop.last %}, {% endif %}
+          {% endfor %}
+          {% if pkg.package_subtests|length > 3 %} dkk...{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); padding-top: 0.75rem; border-top: 1px solid var(--light-200); margin-bottom: 1rem;">
+        <div><i class="fas fa-question-circle"></i> <b>{{ pkg.total_questions_count }}</b> Soal</div>
+        <div><i class="fas fa-hourglass-half"></i> <b>{{ pkg.total_duration_minutes }}</b> Menit</div>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem;">
+        {% if session and session.status == 'completed' %}
+          <a href="{{ url_for('exam.result', session_id=session.id) }}" class="btn btn-success" style="flex: 1;">
+            <i class="fas fa-poll"></i> Lihat Skor IRT
+          </a>
+        {% elif session and session.status == 'in_progress' %}
+          <a href="{{ url_for('exam.cbt_room', session_id=session.id) }}" class="btn btn-warning" style="flex: 1;">
+            <i class="fas fa-play"></i> Lanjutkan Ujian
+          </a>
+        {% else %}
+          <a href="{{ url_for('exam.package_detail', package_id=pkg.id) }}" class="btn btn-primary" style="flex: 1;">
+            <i class="fas fa-arrow-right"></i> Pilih Paket
+          </a>
+        {% endif %}
+        <a href="{{ url_for('exam.leaderboard', package_id=pkg.id) }}" class="btn btn-secondary" title="Lihat Peringkat">
+          <i class="fas fa-trophy"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-muted);">
+    <i class="fas fa-book-open" style="font-size: 3.5rem; margin-bottom: 1rem; color: var(--light-300);"></i>
+    <h3>Belum Ada Paket Tryout yang Dibuka</h3>
+    <p>Silakan hubungi administrator atau kembali lagi nanti untuk jadwal tryout berikutnya.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

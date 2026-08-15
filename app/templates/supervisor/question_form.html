@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}{% if question %}Edit Soal #{{ question.id }}{% else %}Tambah Soal Baru{% endif %} - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto 2rem auto;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-edit" style="color: var(--primary-600);"></i> {% if question %}Edit Butir Soal #{{ question.id }}{% else %}Tambah Butir Soal Baru{% endif %}
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Lengkapi informasi soal, opsi, kunci jawaban, dan pembahasan materi.</p>
+    </div>
+    <a href="{{ url_for('supervisor.questions') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Kembali ke Bank Soal
+    </a>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" class="card" style="padding: 2rem;">
+    
+    <!-- Section 1: Hierarchy & Metadata -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin-bottom: 1.25rem; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+      <i class="fas fa-sitemap"></i> 1. Kategori Subtes (Tier 2) & Topik (Tier 3)
+    </h3>
+
+    <div class="grid-3">
+      <div class="form-group">
+        <label class="form-label">Subtes (Tier 2) <span style="color: var(--danger-500);">*</span></label>
+        <select id="subtest_id" name="subtest_id" class="form-control" required onchange="loadTopicsBySubtest(this.value)">
+          <option value="">-- Pilih Subtes --</option>
+          {% for s in subtests %}
+          <option value="{{ s.id }}" {% if question and question.subtest_id == s.id %}selected{% endif %}>
+            {{ s.test_group.name }} &rarr; {{ s.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Topik / Kompetensi (Tier 3 Opsional)</label>
+        <select id="topic_id" name="topic_id" class="form-control">
+          <option value="">-- Tanpa Topik Khusus --</option>
+          {% for t in topics %}
+          <option value="{{ t.id }}" data-subtest="{{ t.subtest_id }}" {% if question and question.topic_id == t.id %}selected{% endif %}>
+            {{ t.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tingkat Kesulitan Estimasi</label>
+        <select name="difficulty_level" class="form-control">
+          <option value="mudah" {% if question and question.difficulty_level == 'mudah' %}selected{% endif %}>Mudah</option>
+          <option value="sedang" {% if not question or question.difficulty_level == 'sedang' %}selected{% endif %}>Sedang</option>
+          <option value="sulit" {% if question and question.difficulty_level == 'sulit' %}selected{% endif %}>Sulit</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Section 2: Question Type & Content -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.5rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+      <i class="fas fa-file-alt"></i> 2. Tipe & Teks Soal
+    </h3>
+
+    <div class="form-group">
+      <label class="form-label">Pilih Bentuk / Tipe Soal <span style="color: var(--danger-500);">*</span></label>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; background: var(--light-50); border: 2px solid var(--light-300); padding: 0.75rem 1.25rem; border-radius: var(--radius-md); cursor: pointer;" class="q-type-label">
+          <input type="radio" name="question_type" value="pg" {% if not question or question.question_type == 'pg' %}checked{% endif %} onchange="switchQuestionType('pg')">
+          <div>
+            <b>Pilihan Ganda (A-E)</b>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">1 Jawaban Benar</div>
+          </div>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 0.5rem; background: var(--light-50); border: 2px solid var(--light-300); padding: 0.75rem 1.25rem; border-radius: var(--radius-md); cursor: pointer;" class="q-type-label">
+          <input type="radio" name="question_type" value="pg_kompleks" {% if question and question.question_type == 'pg_kompleks' %}checked{% endif %} onchange="switchQuestionType('pg_kompleks')">
+          <div>
+            <b>Pilihan Berganda (Checklist)</b>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Centang Semua yang Benar</div>
+          </div>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 0.5rem; background: var(--light-50); border: 2px solid var(--light-300); padding: 0.75rem 1.25rem; border-radius: var(--radius-md); cursor: pointer;" class="q-type-label">
+          <input type="radio" name="question_type" value="isian" {% if question and question.question_type == 'isian' %}checked{% endif %} onchange="switchQuestionType('isian')">
+          <div>
+            <b>Isian Singkat</b>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Khusus Angka / Kata Sederhana</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="question_text">Teks Butir Soal <span style="color: var(--danger-500);">*</span></label>
+      <textarea id="question_text" name="question_text" class="form-control" rows="5" placeholder="Tuliskan pertanyaan soal secara lengkap di sini..." required>{{ question.question_text if question else '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="question_image">Lampiran Gambar / Grafik Soal (Opsional)</label>
+      <input type="file" id="question_image" name="question_image" class="form-control" accept="image/*">
+      {% if question and question.question_image %}
+      <div style="margin-top: 0.5rem;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Gambar saat ini:</span>
+        <img src="/static/uploads/questions/{{ question.question_image }}" alt="Preview" style="max-height: 100px; display: block; border-radius: 6px; margin-top: 0.25rem;">
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Section 3: Options & Answers Builder -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.5rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+      <i class="fas fa-check-double"></i> 3. Opsi Pilihan & Kunci Jawaban
+    </h3>
+
+    <!-- Builder 1: Pilihan Ganda Tunggal (A-E) -->
+    <div id="section-builder-pg">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Isi teks pilihan jawaban A s/d E, lalu pilih <b>satu radio button</b> yang merupakan kunci jawaban benar.
+      </p>
+
+      {% set pg_opts = question.options if question and question.question_type == 'pg' else [] %}
+      {% set pg_opt_dict = {} %}
+      {% for opt in pg_opts %}
+        {% set _ = pg_opt_dict.update({opt.key: opt.text}) %}
+      {% endfor %}
+      {% set correct_pg = question.correct_answer if question and question.question_type == 'pg' else 'A' %}
+
+      {% for k in ['A', 'B', 'C', 'D', 'E'] %}
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+        <label style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: var(--primary-100); color: var(--primary-800); font-weight: 700; border-radius: 50%; flex-shrink: 0;">
+          {{ k }}
+        </label>
+        <input type="text" name="opt_text_{{ k }}" class="form-control" placeholder="Teks opsi {{ k }}" value="{{ pg_opt_dict.get(k, '') }}">
+        <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; flex-shrink: 0; padding: 0.5rem 0.75rem; background: var(--light-100); border-radius: var(--radius-sm);">
+          <input type="radio" name="correct_pg" value="{{ k }}" {% if correct_pg == k %}checked{% endif %}>
+          Kunci Benar
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Builder 2: Pilihan Berganda Kompleks (Multi Checkbox) -->
+    <div id="section-builder-pg-kompleks" style="display: none;">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Isi pernyataan/pilihan jawaban A s/d E, lalu centang <b>semua checkbox</b> yang merupakan jawaban benar.
+      </p>
+
+      {% set k_opts = question.options if question and question.question_type == 'pg_kompleks' else [] %}
+      {% set k_opt_dict = {} %}
+      {% for opt in k_opts %}
+        {% set _ = k_opt_dict.update({opt.key: opt.text}) %}
+      {% endfor %}
+      {% set correct_k = question.correct_answer if question and question.question_type == 'pg_kompleks' else [] %}
+
+      {% for k in ['A', 'B', 'C', 'D', 'E'] %}
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+        <label style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: var(--warning-100); color: var(--warning-800); font-weight: 700; border-radius: 50%; flex-shrink: 0;">
+          {{ k }}
+        </label>
+        <input type="text" name="opt_kompleks_text_{{ k }}" class="form-control" placeholder="Pernyataan {{ k }}" value="{{ k_opt_dict.get(k, '') }}">
+        <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; flex-shrink: 0; padding: 0.5rem 0.75rem; background: var(--light-100); border-radius: var(--radius-sm);">
+          <input type="checkbox" name="correct_kompleks" value="{{ k }}" {% if k in correct_k %}checked{% endif %}>
+          Benar
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Builder 3: Isian Singkat -->
+    <div id="section-builder-isian" style="display: none;">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+        Tentukan kunci jawaban isian singkat (angka atau kata sederhana). Anda dapat memasukkan variasi jawaban yang diterima dengan memisahkan tanda koma (misal: <code>25, 25.0, dua puluh lima</code>).
+      </p>
+
+      {% set isian_val = question.correct_answer if question and question.question_type == 'isian' else '' %}
+      {% if isian_val is iterable and not isian_val is string %}
+        {% set isian_str = isian_val | join(', ') %}
+      {% else %}
+        {% set isian_str = isian_val %}
+      {% endif %}
+
+      <div class="form-group">
+        <label class="form-label">Kunci Jawaban yang Diterima (Variasi dipisah koma)</label>
+        <input type="text" name="isian_answers" class="form-control" placeholder="Contoh: 144 atau fotosintesis" value="{{ isian_str }}">
+      </div>
+    </div>
+
+    <!-- Section 4: Pembahasan / Solusi Lengkap -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.5rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+      <i class="fas fa-lightbulb"></i> 4. Pembahasan & Solusi Lengkap
+    </h3>
+
+    <div class="form-group">
+      <label class="form-label" for="explanation_text">Teks Pembahasan / Langkah Penyelesaian</label>
+      <textarea id="explanation_text" name="explanation_text" class="form-control" rows="4" placeholder="Tuliskan analisis, langkah pengerjaan, atau rumus penyelesaian...">{{ question.explanation_text if question else '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="explanation_image">Gambar / Diagram Pembahasan (Opsional)</label>
+      <input type="file" id="explanation_image" name="explanation_image" class="form-control" accept="image/*">
+      {% if question and question.explanation_image %}
+      <div style="margin-top: 0.5rem;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Gambar pembahasan saat ini:</span>
+        <img src="/static/uploads/explanations/{{ question.explanation_image }}" alt="Preview" style="max-height: 100px; display: block; border-radius: 6px; margin-top: 0.25rem;">
+      </div>
+      {% endif %}
+    </div>
+
+    <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+      <a href="{{ url_for('supervisor.questions') }}" class="btn btn-secondary">Batal</a>
+      <button type="submit" id="btn-submit-question" class="btn btn-primary btn-lg">
+        <i class="fas fa-save"></i> {% if question %}Simpan Perubahan Soal{% else %}Simpan ke Bank Soal{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.querySelector('form').addEventListener('submit', function() {
+  const btn = document.getElementById('btn-submit-question');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan ke Bank Soal...';
+  }
+});
+function switchQuestionType(type) {
+  document.getElementById('section-builder-pg').style.display = type === 'pg' ? 'block' : 'none';
+  document.getElementById('section-builder-pg-kompleks').style.display = type === 'pg_kompleks' ? 'block' : 'none';
+  document.getElementById('section-builder-isian').style.display = type === 'isian' ? 'block' : 'none';
+}
+
+function loadTopicsBySubtest(subtestId) {
+  const topicSelect = document.getElementById('topic_id');
+  const options = topicSelect.querySelectorAll('option');
+  
+  options.forEach(opt => {
+    if (!opt.value) return; // Keep the default "Tanpa Topik"
+    const sub = opt.getAttribute('data-subtest');
+    if (!subtestId || sub === subtestId) {
+      opt.style.display = 'block';
+    } else {
+      opt.style.display = 'none';
+    }
+  });
+}
+
+// Initial setup on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const selectedType = document.querySelector('input[name="question_type"]:checked');
+  if (selectedType) {
+    switchQuestionType(selectedType.value);
+  }
+  const subtestSelect = document.getElementById('subtest_id');
+  if (subtestSelect && subtestSelect.value) {
+    loadTopicsBySubtest(subtestSelect.value);
+  }
+});
+</script>
+{% endblock %}

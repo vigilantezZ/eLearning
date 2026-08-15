@@ -1,0 +1,52 @@
+# ==============================================================================
+# BMP Tryout & CBT System - Git Ignore Configuration
+# ==============================================================================
+
+# PyInstaller / Build & Compile outputs
+dist/
+build/
+*.spec
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite Database & local storage
+instance/*.db
+instance/*.sqlite
+instance/*.sqlite3
+!instance/.gitkeep
+
+# Uploaded dynamic media files
+uploads/avatars/*
+uploads/questions/*
+uploads/explanations/*
+!uploads/**/.gitkeep
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs & Temporary files
+*.log
+scratch/
+tmp/
+temp/

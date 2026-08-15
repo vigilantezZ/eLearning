@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Proteksi & Manajemen Penyimpanan - Admin BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-hdd" style="color: var(--primary-600);"></i> Proteksi & Manajemen Penyimpanan
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Pantau penggunaan disk penyimpanan, bersihkan log lawas, sesi ujian terbengkalai, file sampah, dan optimasi database.</p>
+    </div>
+    <div>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Kembali ke Panel Admin
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Storage Metrics Grid -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+  <div class="card" style="border-left: 4px solid var(--primary-600);">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Ukuran Database (SQLite)</div>
+    <div style="font-size: 2rem; font-weight: 800; color: var(--primary-700); margin: 0.2rem 0;">{{ db_size_formatted }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">{{ total_answers }} baris jawaban &bull; {{ total_scores }} nilai</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--accent-500);">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Media Unggahan (Uploads)</div>
+    <div style="font-size: 2rem; font-weight: 800; color: var(--accent-600); margin: 0.2rem 0;">{{ total_uploads_formatted }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Foto Soal, Pembahasan & Avatar</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--warning-500);">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Log Aktivitas</div>
+    <div style="font-size: 2rem; font-weight: 800; color: var(--warning-600); margin: 0.2rem 0;">{{ total_logs }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">{{ logs_older_30d }} log berusia &gt; 30 hari</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--danger-500);">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Sesi Terbengkalai</div>
+    <div style="font-size: 2rem; font-weight: 800; color: var(--danger-600); margin: 0.2rem 0;">{{ abandoned_sessions }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Ujian in-progress &gt; 3 hari lalu</div>
+  </div>
+</div>
+
+<!-- Housekeeping Actions Grid -->
+<div class="grid-2" style="margin-bottom: 2rem; gap: 1.5rem;">
+
+  <!-- Card 1: Pembersihan Log Aktivitas -->
+  <div class="card">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+      <div style="width: 42px; height: 42px; border-radius: var(--radius-md); background: var(--warning-100); color: var(--warning-700); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+        <i class="fas fa-history"></i>
+      </div>
+      <div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0;">Pembersihan Log Aktivitas</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Hapus catatan log login, logout, dan proctoring lawas.</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.cleanup_logs') }}">
+      <div style="margin-bottom: 1rem;">
+        <label for="days" class="form-label" style="font-weight: 600;">Pilih Rentang Waktu Pembersihan:</label>
+        <select name="days" id="days" class="form-control" style="font-weight: 500;">
+          <option value="30">Hapus log yang lebih lama dari 30 Hari ({{ logs_older_30d }} rekaman)</option>
+          <option value="7">Hapus log yang lebih lama dari 7 Hari ({{ logs_older_7d }} rekaman)</option>
+          <option value="90">Hapus log yang lebih lama dari 90 Hari</option>
+          <option value="all_except_100">Bersihkan semua, sisakan hanya 100 log terbaru</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-warning" style="width: 100%;" onclick="return confirm('Apakah Anda yakin ingin menghapus catatan log aktivitas sesuai rentang yang dipilih?');">
+        <i class="fas fa-broom"></i> Bersihkan Log Aktivitas Lawas
+      </button>
+    </form>
+  </div>
+
+  <!-- Card 2: Pembersihan Sesi Ujian Usang & Jawaban -->
+  <div class="card">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+      <div style="width: 42px; height: 42px; border-radius: var(--radius-md); background: var(--danger-100); color: var(--danger-700); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+        <i class="fas fa-file-invoice"></i>
+      </div>
+      <div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0;">Pembersihan Sesi Ujian & Jawaban</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Hapus sesi ujian terbengkalai atau arsip pengerjaan per paket.</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.cleanup_sessions') }}">
+      <div style="margin-bottom: 1rem;">
+        <label for="target" class="form-label" style="font-weight: 600;">Target Pembersihan Sesi:</label>
+        <select name="target" id="target" class="form-control" onchange="togglePackageSelect(this.value);" style="font-weight: 500;">
+          <option value="abandoned">Hapus Sesi Terbengkalai (In-Progress &gt; 3 hari lalu: {{ abandoned_sessions }} sesi)</option>
+          <option value="package">Hapus Seluruh Sesi Berdasarkan Paket Tertentu</option>
+          <option value="old_completed">Hapus Sesi Selesai yang Lebih Lama dari 90 Hari</option>
+        </select>
+      </div>
+
+      <div id="package_select_wrapper" style="display: none; margin-bottom: 1rem;">
+        <label for="package_id" class="form-label" style="font-weight: 600;">Pilih Paket Tryout:</label>
+        <select name="package_id" id="package_id" class="form-control">
+          {% for p in packages %}
+            <option value="{{ p.id }}">{{ p.title }} ({{ p.exam_sessions.count() }} sesi pengerjaan)</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-danger" style="width: 100%;" onclick="return confirm('PENTING: Seluruh jawaban pengerjaan dan skor sesi ujian yang dipilih akan dihapus permanen. Lanjutkan?');">
+        <i class="fas fa-trash-alt"></i> Hapus Sesi Ujian & Lembar Jawaban
+      </button>
+    </form>
+  </div>
+
+  <!-- Card 3: Pembersihan File Gambar Sampah (Orphaned Files) -->
+  <div class="card">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+      <div style="width: 42px; height: 42px; border-radius: var(--radius-md); background: var(--accent-100); color: var(--accent-700); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+        <i class="fas fa-images"></i>
+      </div>
+      <div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0;">File Media Sampah (Orphaned)</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Hapus foto soal/pembahasan/avatar yang sudah tidak terhubung ke data manapun.</p>
+      </div>
+    </div>
+
+    <div style="background: var(--light-100); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1.2rem; font-size: 0.85rem; color: var(--text-muted);">
+      <div>&bull; Rincian Uploads: Avatar ({{ avatars_size_formatted }}), Soal ({{ questions_size_formatted }}), Pembahasan ({{ explanations_size_formatted }}).</div>
+      <div style="font-weight: 700; color: var(--text-main); margin-top: 0.3rem;">&bull; Terdeteksi: {{ orphan_files_count }} file gambar tidak terpakai.</div>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.cleanup_orphaned_files') }}">
+      <button type="submit" class="btn btn-primary" style="width: 100%;" {% if orphan_files_count == 0 %}disabled{% endif %}>
+        <i class="fas fa-recycle"></i> Bersihkan {{ orphan_files_count }} File Sampah
+      </button>
+    </form>
+  </div>
+
+  <!-- Card 4: SQLite Database VACUUM & Defragmentasi -->
+  <div class="card">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+      <div style="width: 42px; height: 42px; border-radius: var(--radius-md); background: var(--success-100); color: var(--success-700); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+        <i class="fas fa-compress-alt"></i>
+      </div>
+      <div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0;">Optimalisasi & Kompresi Database (VACUUM)</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Kompensasi dan kembalikan ruang kosong pada file SQLite ke hard disk.</p>
+      </div>
+    </div>
+
+    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.2rem;">
+      Setelah menghapus baris log atau sesi lama, SQLite tetap menyisakan ruang kosong di dalam file <code>tryout.db</code>. Jalankan proses <b>VACUUM</b> untuk mengecilkan ukuran file database secara fisik.
+    </p>
+
+    <form method="POST" action="{{ url_for('admin.vacuum_db') }}">
+      <button type="submit" class="btn btn-success" style="width: 100%;">
+        <i class="fas fa-bolt"></i> Jalankan SQLite VACUUM Sekarang
+      </button>
+    </form>
+  </div>
+
+</div>
+
+<!-- Info Safety Alert -->
+<div class="card" style="background: var(--primary-50); border: 1px solid var(--primary-100);">
+  <div style="display: flex; align-items: flex-start; gap: 1rem;">
+    <i class="fas fa-shield-alt" style="font-size: 1.5rem; color: var(--primary-600); margin-top: 0.2rem;"></i>
+    <div>
+      <h4 style="font-weight: 700; color: var(--primary-800); margin-bottom: 0.25rem;">Kebijakan Keamanan & Proteksi Data</h4>
+      <p style="font-size: 0.875rem; color: var(--primary-700); margin: 0; line-height: 1.5;">
+        Hanya akun dengan hak akses <b>Administrator</b> yang dapat menjalankan modul proteksi dan pembersihan penyimpanan ini. Seluruh aksi pembersihan penyimpanan akan otomatis dicatat dalam log sistem audit trail.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function togglePackageSelect(val) {
+    const wrapper = document.getElementById('package_select_wrapper');
+    if (val === 'package') {
+      wrapper.style.display = 'block';
+    } else {
+      wrapper.style.display = 'none';
+    }
+  }
+</script>
+{% endblock %}

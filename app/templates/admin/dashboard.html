@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Panel Kontrol Administrator - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-user-shield" style="color: var(--primary-600);"></i> Panel Kontrol Administrator
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Pusat kontrol manajemen pengguna, paket tryout, eksekusi kalkulasi IRT, dan monitoring sistem.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('admin.package_new') }}" class="btn btn-primary">
+        <i class="fas fa-folder-plus"></i> Buat Paket Tryout
+      </a>
+      <a href="{{ url_for('admin.user_new') }}" class="btn btn-secondary">
+        <i class="fas fa-user-plus"></i> Tambah Pengguna
+      </a>
+      <a href="{{ url_for('admin.irt_calculator') }}" class="btn btn-warning">
+        <i class="fas fa-calculator"></i> Kalkulasi IRT
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Counter Grid -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+  <div class="card" style="border-left: 4px solid var(--primary-600);">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Pengguna</div>
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--primary-700); margin: 0.2rem 0;">{{ total_users }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">{{ total_peserta }} Peserta &bull; {{ total_supervisor }} Supervisor</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--accent-500);">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Paket Tryout</div>
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--accent-600); margin: 0.2rem 0;">{{ total_packages }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Tersedia untuk simulasi</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--success-500);">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Sesi Ujian Selesai</div>
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--success-700); margin: 0.2rem 0;">{{ total_completed_exams }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Telah dikerjakan peserta</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--warning-500);">
+    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Ujian Sedang Aktif</div>
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--warning-600); margin: 0.2rem 0;">{{ total_active_exams }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Peserta dalam CBT Room</div>
+  </div>
+</div>
+
+<!-- Admin Modules Quick Grid -->
+<div class="grid-4" style="margin-bottom: 2.5rem;">
+  <a href="{{ url_for('admin.users') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--primary-100); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-users-cog"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Manajemen Pengguna</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Kelola akun Peserta, SPV & Admin.</p>
+    </div>
+  </a>
+
+  <a href="{{ url_for('admin.packages') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--accent-500); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-layer-group"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Manajemen Paket</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Paket ujian & timer subtes.</p>
+    </div>
+  </a>
+
+  <a href="{{ url_for('admin.live_monitor') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--warning-100); color: var(--warning-700); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-desktop"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Live Proctoring</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Pantau peserta & audit trail.</p>
+    </div>
+  </a>
+
+  <a href="{{ url_for('admin.storage_manager') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--success-100); color: var(--success-700); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-hdd"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Proteksi Storage</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Bersihkan log & vacuum DB.</p>
+    </div>
+  </a>
+</div>
+
+<!-- 2-Column: Recent Packages & Activity Feed -->
+<div class="grid-2" style="align-items: flex-start;">
+  
+  <!-- Packages Table -->
+  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+      <h3 style="font-weight: 700; font-size: 1.15rem; color: var(--text-main);">
+        <i class="fas fa-book-reader"></i> Paket Tryout Terkini
+      </h3>
+      <a href="{{ url_for('admin.packages') }}" class="btn btn-secondary btn-sm">Semua Paket &rarr;</a>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th>Paket Tryout</th>
+            <th>Soal & Durasi</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pkg in packages %}
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: var(--text-main);">{{ pkg.title }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">
+                {{ pkg.package_subtests|length }} Subtes dikonfigurasi
+              </div>
+            </td>
+            <td>
+              <b>{{ pkg.total_questions_count }}</b> Soal &bull; {{ pkg.total_duration_minutes }} Menit
+            </td>
+            <td>
+              {% if pkg.is_published %}
+                <span class="badge badge-success">Terbit</span>
+              {% else %}
+                <span class="badge badge-neutral">Draf</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+              Belum ada paket tryout yang dibuat.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent System Activities -->
+  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+      <h3 style="font-weight: 700; font-size: 1.15rem; color: var(--text-main);">
+        <i class="fas fa-stream"></i> Aktivitas Sistem Terbaru
+      </h3>
+      <a href="{{ url_for('admin.live_monitor') }}" class="btn btn-secondary btn-sm">Audit Trail &rarr;</a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      {% for log in recent_activities %}
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.6rem; border-bottom: 1px solid var(--light-100); font-size: 0.85rem;">
+        <div>
+          <span class="badge badge-neutral" style="font-size: 0.7rem; margin-right: 0.4rem;">{{ log.action }}</span>
+          <span style="font-weight: 600; color: var(--text-main);">{{ log.user.full_name if log.user else 'Guest/System' }}</span>: 
+          <span style="color: var(--text-muted);">{{ log.details }}</span>
+        </div>
+        <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">
+          {{ log.created_at | datetime_format('%H:%M:%S') }}
+        </span>
+      </div>
+      {% else %}
+      <div style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+        Belum ada rekaman aktivitas sistem.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

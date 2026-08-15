@@ -1,0 +1,48 @@
+================================================================
+  BMPTryout - AUTO RUN SETUP (Windows Task Scheduler)
+================================================================
+
+[ SETUP AUTO-RUN ON BOOT ]
+
+  Jalankan PowerShell sebagai Administrator, lalu:
+
+    schtasks /create /tn "BMPTryout" /tr "d:\Project\eLearning\dist\BMPTryout.exe" /sc onstart /ru SYSTEM /rl highest /f
+
+  * Sesuaikan path d:\Project\eLearning\dist\BMPTryout.exe sesuai lokasi .exe di komputer/server Anda
+
+
+[ TEST JALANIN SEKARANG ]
+
+    schtasks /run /tn "BMPTryout"
+
+
+[ CEK STATUS ]
+
+    schtasks /query /tn "BMPTryout"
+
+  Akses website CBT:   http://localhost:5000
+
+
+[ DISABLE / STOP ]
+
+    schtasks /end /tn "BMPTryout"
+
+
+[ HAPUS PERMANEN ]
+
+    schtasks /delete /tn "BMPTryout" /f
+
+================================================================
+  ALTERNATIF: Manual Start / Stop via PowerShell
+================================================================
+
+  Start:   Start-Process "d:\Project\eLearning\dist\BMPTryout.exe"
+  Stop:    Get-Process BMPTryout | Stop-Process -Force
+
+================================================================
+  AKUN LOGIN DEFAULT (Bawaan Sistem):
+================================================================
+  Administrator : admin / admin123
+  Supervisor    : supervisor / spv123
+  Peserta Demo  : peserta1 / peserta123
+================================================================

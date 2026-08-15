@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Hasil Nilai & Sertifikat Tryout - {{ session.tryout_package.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 1rem auto 3rem auto;">
+  
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+    <div>
+      <a href="{{ url_for('exam.catalog') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Kembali ke Katalog
+      </a>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('exam.review_pembahasan', session_id=session.id) }}" class="btn btn-primary">
+        <i class="fas fa-book-reader"></i> Lihat Pembahasan Soal & Kunci
+      </a>
+      <a href="{{ url_for('exam.leaderboard', package_id=session.tryout_package_id) }}" class="btn btn-secondary">
+        <i class="fas fa-trophy"></i> Leaderboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Hero Score Banner -->
+  <div class="score-hero-card" style="margin-bottom: 2rem;">
+    <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.15); padding: 0.35rem 1rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;">
+      <i class="fas fa-award"></i> LEMBAR HASIL TRYOUT UTBK SNBT
+    </div>
+
+    <h1 style="font-size: 1.85rem; font-weight: 800; margin-bottom: 0.5rem;">
+      {{ session.tryout_package.title }}
+    </h1>
+
+    <div style="font-size: 0.95rem; opacity: 0.9; margin-bottom: 1.5rem;">
+      Peserta: <b>{{ session.user.full_name }}</b> &bull; {{ session.user.school or 'Peserta CBT' }}
+    </div>
+
+    <div style="display: flex; justify-content: center; align-items: center; gap: 3rem; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Skor Terstandarisasi IRT</div>
+        <div class="score-display-number">
+          {% if session.tryout_package.is_irt_calculated %}
+            {{ session.total_irt_score | format_score }}
+          {% else %}
+            <span style="font-size: 2.2rem;">Menunggu IRT</span>
+          {% endif %}
+        </div>
+        <div style="font-size: 0.85rem; opacity: 0.8;">Skala Standar Nasional 200 - 1000</div>
+      </div>
+
+      {% if session.tryout_package.is_irt_calculated and session.national_rank %}
+      <div style="border-left: 1px solid rgba(255,255,255,0.25); padding-left: 3rem;">
+        <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Peringkat Nasional</div>
+        <div style="font-size: 3.5rem; font-weight: 800; margin: 0.5rem 0; color: #fef08a;">
+          #{{ session.national_rank }}
+        </div>
+        <div style="font-size: 0.85rem; opacity: 0.8;">Dari {{ total_participants }} Total Peserta</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- IRT Status Info Alert if pending -->
+  {% if not session.tryout_package.is_irt_calculated %}
+  <div class="alert alert-warning" style="margin-bottom: 2rem;">
+    <i class="fas fa-info-circle" style="font-size: 1.25rem;"></i>
+    <div>
+      <b>Kalkulasi IRT Sedang Dalam Proses:</b> Nilai akhir IRT dihitung setelah seluruh sesi peserta selesai dikalibrasi oleh sistem untuk menentukan bobot kesulitan empiris setiap butir soal. Anda tetap dapat langsung melihat review pembahasan soal di bawah.
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Subtest Scores Breakdown Cards -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 1.25rem;">
+      <i class="fas fa-chart-pie" style="color: var(--primary-600);"></i> Rincian Nilai per Subtes (Tier 2)
+    </h3>
+
+    <div class="grid-2">
+      {% for sc in subtest_scores %}
+      <div style="background: var(--light-50); border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+          <div>
+            <span class="badge badge-primary" style="font-size: 0.7rem;">{{ sc.subtest.test_group.name }}</span>
+            <h4 style="font-weight: 800; font-size: 1.05rem; color: var(--dark-900); margin-top: 0.2rem;">{{ sc.subtest.name }}</h4>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 1.6rem; font-weight: 800; color: var(--primary-700);">
+              {{ sc.irt_score | format_score }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Skor IRT</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--dark-700); padding-top: 0.6rem; border-top: 1px dashed var(--light-300);">
+          <span>Jawaban Benar:</span>
+          <b>{{ sc.raw_correct }} dari {{ sc.raw_total }} Soal</b>
+        </div>
+      </div>
+      {% else %}
+      <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 1.5rem;">
+        Rincian nilai subtes akan muncul setelah proses kalkulasi IRT selesai dijalankan oleh Administrator.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Action CTA -->
+  <div style="text-align: center;">
+    <a href="{{ url_for('exam.review_pembahasan', session_id=session.id) }}" class="btn btn-primary btn-lg" style="padding: 1rem 3rem;">
+      <i class="fas fa-book-reader"></i> Buka Lembar Pembahasan & Solusi Lengkap
+    </a>
+  </div>
+
+</div>
+{% endblock %}

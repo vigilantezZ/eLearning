@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Live Proctoring & Activity Logs - Admin BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-desktop" style="color: var(--primary-600);"></i> Live Proctoring & Activity Logs
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Pemantauan waktu nyata peserta yang sedang mengerjakan ujian dan log audit sistem.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('admin.live_monitor') }}" class="btn btn-secondary btn-sm" title="Refresh Live Data">
+        <i class="fas fa-sync-alt"></i> Refresh Data
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Active Test Sessions Currently in Progress -->
+<div class="card" style="margin-bottom: 2rem; border-left: 4px solid var(--warning-500);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+    <h3 style="font-weight: 700; font-size: 1.15rem; color: var(--text-main);">
+      <i class="fas fa-spinner fa-spin" style="color: var(--warning-500);"></i> Peserta yang Sedang Mengerjakan Ujian ({{ active_sessions|length }} Sesi Aktif)
+    </h3>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Peserta</th>
+          <th>Paket Tryout</th>
+          <th>Subtes Aktif</th>
+          <th>Progres Jawaban</th>
+          <th>Waktu Mulai</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in active_sessions %}
+        {% set sub_list = s.tryout_package.package_subtests %}
+        {% set active_sub = sub_list[s.current_subtest_index].subtest if s.current_subtest_index < sub_list|length else None %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <img src="{{ s.user.avatar_url }}" alt="{{ s.user.full_name }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+              <div>
+                <div style="font-weight: 700; color: var(--text-main);">{{ s.user.full_name }}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">{{ s.user.school or '-' }}</div>
+              </div>
+            </div>
+          </td>
+          <td><b>{{ s.tryout_package.title }}</b></td>
+          <td>
+            <span class="badge badge-primary">
+              Subtes ke-{{ s.current_subtest_index + 1 }}: {{ active_sub.name if active_sub else 'Transisi' }}
+            </span>
+          </td>
+          <td>
+            <div style="font-weight: 700; color: var(--success-700);">
+              {{ s.answered_count }} / {{ s.tryout_package.total_questions_count }} Terisi
+            </div>
+          </td>
+          <td style="font-size: 0.85rem; color: var(--text-muted);">
+            {{ s.start_time | datetime_format('%H:%M:%S') }}
+          </td>
+          <td style="font-size: 0.8rem; font-family: monospace;">{{ s.ip_address or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+            Tidak ada peserta yang sedang aktif mengerjakan ujian saat ini.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Activity Log Stream -->
+<div class="card">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+    <h3 style="font-weight: 700; font-size: 1.15rem; color: var(--text-main);">
+      <i class="fas fa-stream"></i> Rekaman Audit Trail & Log Aktivitas Sistem
+    </h3>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th style="width: 120px;">Waktu</th>
+          <th>Tindakan (Action)</th>
+          <th>Pengguna</th>
+          <th>Detail Aktivitas</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr>
+          <td style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">
+            {{ log.created_at | datetime_format }}
+          </td>
+          <td>
+            <span class="badge badge-{% if log.action in ['LOGIN', 'REGISTER'] %}primary{% elif log.action in ['START_EXAM', 'SUBMIT_EXAM'] %}success{% elif log.action == 'CALC_IRT' %}warning{% else %}neutral{% endif %}">
+              {{ log.action }}
+            </span>
+          </td>
+          <td>
+            {% if log.user %}
+              <b>{{ log.user.full_name }}</b> <span style="font-size: 0.75rem; color: var(--text-muted);">({{ log.user.role }})</span>
+            {% else %}
+              <span style="color: var(--text-muted);">Guest / System</span>
+            {% endif %}
+          </td>
+          <td style="font-size: 0.875rem; color: var(--dark-800);">
+            {{ log.details }}
+          </td>
+          <td style="font-size: 0.8rem; font-family: monospace; color: var(--text-muted);">
+            {{ log.ip_address or '-' }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+            Belum ada aktivitas yang terekam dalam sistem.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

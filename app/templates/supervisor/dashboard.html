@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Panel Supervisor - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-chalkboard-teacher" style="color: var(--primary-600);"></i> Portal Supervisor BMP CBT
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Kelola bank soal, buat & publikasikan paket tryout, eksekusi IRT, dan monitor peserta ujian.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+      <a href="{{ url_for('admin.package_new') }}" class="btn btn-primary">
+        <i class="fas fa-folder-plus"></i> Buat Paket Tryout
+      </a>
+      <a href="{{ url_for('supervisor.question_new') }}" class="btn btn-secondary">
+        <i class="fas fa-plus-circle"></i> Tambah Soal Baru
+      </a>
+      <a href="{{ url_for('admin.irt_calculator') }}" class="btn btn-warning">
+        <i class="fas fa-calculator"></i> Kalkulasi IRT
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Counter Grid -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+  <div class="card" style="border-left: 4px solid var(--primary-600);">
+    <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Butir Soal</div>
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--primary-700); margin: 0.2rem 0;">{{ total_questions }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">{{ my_questions }} soal dibuat oleh Anda</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--accent-500);">
+    <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Pilihan Ganda (A-E)</div>
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--accent-600); margin: 0.2rem 0;">{{ pg_count }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Tipe PG Tunggal Standar</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--warning-500);">
+    <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Pilihan Berganda (Checklist)</div>
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--warning-600); margin: 0.2rem 0;">{{ pg_kompleks_count }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Tipe PG Kompleks / Multi-jawaban</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--success-500);">
+    <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Isian Singkat</div>
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--success-600); margin: 0.2rem 0;">{{ isian_count }}</div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">Tipe Angka & Kata Sederhana</div>
+  </div>
+</div>
+
+<!-- Quick Navigation Banner Grid -->
+<div class="grid-3" style="margin-bottom: 2.5rem;">
+  <a href="{{ url_for('admin.packages') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--accent-500); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-layer-group"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Manajemen Paket Tryout</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Buat paket ujian, set timer subtes, dan publikasikan.</p>
+    </div>
+  </a>
+
+  <a href="{{ url_for('supervisor.questions') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--primary-100); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-list-ol"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Bank Soal & T1-T3</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Kelola butir soal, opsi jawaban, dan pembahasan.</p>
+    </div>
+  </a>
+
+  <a href="{{ url_for('admin.live_monitor') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--warning-100); color: var(--warning-700); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-desktop"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Live Proctoring</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Pantau peserta aktif dan riwayat aktivitas pengerjaan.</p>
+    </div>
+  </a>
+
+  <a href="{{ url_for('admin.irt_calculator') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--warning-100); color: var(--warning-700); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-calculator"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Kalkulasi IRT</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Hitung parameter butir (a,b,c) & skor skala nasional.</p>
+    </div>
+  </a>
+
+  <a href="{{ url_for('supervisor.analytics') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--primary-50); color: var(--primary-700); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-chart-pie"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Statistik & Leaderboard</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Distribusi skor, daya pembeda & ranking nasional.</p>
+    </div>
+  </a>
+
+  <a href="{{ url_for('supervisor.user_history') }}" class="card" style="display: flex; align-items: center; gap: 1.25rem; text-decoration: none; color: inherit;">
+    <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--success-100); color: var(--success-700); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+      <i class="fas fa-history"></i>
+    </div>
+    <div>
+      <h4 style="font-weight: 700; font-size: 1.05rem;">Riwayat Ujian Peserta</h4>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Tracking pengerjaan tryout dan riwayat skor tiap akun.</p>
+    </div>
+  </a>
+</div>
+
+<!-- Recent Questions Table -->
+<div class="card">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+    <h3 style="font-weight: 700; font-size: 1.15rem; color: var(--text-main);">
+      <i class="fas fa-clock"></i> Soal Terbaru di Bank Soal
+    </h3>
+    <a href="{{ url_for('supervisor.questions') }}" class="btn btn-secondary btn-sm">Lihat Semua Soal &rarr;</a>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th>Subtes (T2) / Topik (T3)</th>
+          <th>Tipe Soal</th>
+          <th>Potongan Soal</th>
+          <th>Tingkat Kesulitan</th>
+          <th style="text-align: right;">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in recent_questions %}
+        <tr>
+          <td><b>#{{ q.id }}</b></td>
+          <td>
+            <div style="font-weight: 700; color: var(--primary-700);">{{ q.subtest.name if q.subtest else '-' }}</div>
+            <div style="font-size: 0.775rem; color: var(--text-muted);">{{ q.topic.name if q.topic else 'Tanpa Topik' }}</div>
+          </td>
+          <td>
+            <span class="badge badge-{% if q.question_type == 'pg' %}primary{% elif q.question_type == 'pg_kompleks' %}warning{% else %}success{% endif %}">
+              {{ q.question_type }}
+            </span>
+          </td>
+          <td>
+            <div style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              {{ q.question_text }}
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-{% if q.difficulty_level == 'mudah' %}success{% elif q.difficulty_level == 'sedang' %}primary{% else %}danger{% endif %}">
+              {{ q.difficulty_level }}
+            </span>
+          </td>
+          <td style="text-align: right;">
+            <a href="{{ url_for('supervisor.question_preview', question_id=q.id) }}" class="btn btn-secondary btn-sm" title="Preview">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ url_for('supervisor.question_edit', question_id=q.id) }}" class="btn btn-secondary btn-sm" title="Edit">
+              <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+            Belum ada soal di Bank Soal. Klik tombol "Tambah Soal Baru" di atas.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Bank Soal - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-boxes" style="color: var(--primary-600);"></i> Bank Soal & Jawaban
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Kelola seluruh butir soal (Pilihan Ganda A-E, Pilihan Berganda / Checklist, dan Isian Singkat).</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('supervisor.question_new') }}" class="btn btn-primary">
+        <i class="fas fa-plus-circle"></i> Tambah Soal Baru
+      </a>
+      <a href="{{ url_for('supervisor.structure_manager') }}" class="btn btn-secondary">
+        <i class="fas fa-sitemap"></i> Struktur T1-T3
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+  <form method="GET" action="{{ url_for('supervisor.questions') }}" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+    <div style="flex: 1; min-width: 200px;">
+      <label class="form-label" style="font-size: 0.8rem;">Filter Subtes (Tier 2)</label>
+      <select name="subtest_id" class="form-control" onchange="this.form.submit()">
+        <option value="">-- Semua Subtes --</option>
+        {% for s in subtests %}
+        <option value="{{ s.id }}" {% if current_subtest == s.id %}selected{% endif %}>{{ s.test_group.name }} &rarr; {{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="width: 180px;">
+      <label class="form-label" style="font-size: 0.8rem;">Tipe Soal</label>
+      <select name="type" class="form-control" onchange="this.form.submit()">
+        <option value="">-- Semua Tipe --</option>
+        <option value="pg" {% if current_type == 'pg' %}selected{% endif %}>Pilihan Ganda (A-E)</option>
+        <option value="pg_kompleks" {% if current_type == 'pg_kompleks' %}selected{% endif %}>Pilihan Berganda (Checklist)</option>
+        <option value="isian" {% if current_type == 'isian' %}selected{% endif %}>Isian Singkat</option>
+      </select>
+    </div>
+
+    <div style="width: 160px;">
+      <label class="form-label" style="font-size: 0.8rem;">Tingkat Kesulitan</label>
+      <select name="difficulty" class="form-control" onchange="this.form.submit()">
+        <option value="">-- Semua Kesulitan --</option>
+        <option value="mudah" {% if current_difficulty == 'mudah' %}selected{% endif %}>Mudah</option>
+        <option value="sedang" {% if current_difficulty == 'sedang' %}selected{% endif %}>Sedang</option>
+        <option value="sulit" {% if current_difficulty == 'sulit' %}selected{% endif %}>Sulit</option>
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 220px;">
+      <label class="form-label" style="font-size: 0.8rem;">Cari Kata Kunci Soal</label>
+      <input type="text" name="search" class="form-control" placeholder="Ketik kata kunci..." value="{{ search_query or '' }}">
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary" style="height: 42px;">
+        <i class="fas fa-search"></i> Filter
+      </button>
+      <a href="{{ url_for('supervisor.questions') }}" class="btn btn-secondary" style="height: 42px;" title="Reset Filter">
+        <i class="fas fa-redo"></i>
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- Questions List Table -->
+<div class="card">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+    <h3 style="font-weight: 700; font-size: 1.15rem; color: var(--text-main);">
+      Daftar Butir Soal ({{ questions|length }} Soal)
+    </h3>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th style="width: 70px;">ID</th>
+          <th>Subtes & Topik</th>
+          <th>Tipe Soal</th>
+          <th>Teks / Isi Soal</th>
+          <th>Kunci Jawaban</th>
+          <th>Kesulitan & IRT</th>
+          <th style="text-align: right; width: 140px;">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in questions %}
+        <tr>
+          <td><b>#{{ q.id }}</b></td>
+          <td>
+            <div style="font-weight: 700; color: var(--primary-700);">{{ q.subtest.name if q.subtest else '-' }}</div>
+            <div style="font-size: 0.775rem; color: var(--text-muted);">
+              {{ q.subtest.test_group.name if q.subtest and q.subtest.test_group else '' }}
+              {% if q.topic %} &bull; {{ q.topic.name }}{% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-{% if q.question_type == 'pg' %}primary{% elif q.question_type == 'pg_kompleks' %}warning{% else %}success{% endif %}">
+              {% if q.question_type == 'pg' %}PG A-E{% elif q.question_type == 'pg_kompleks' %}PG Kompleks{% else %}Isian Singkat{% endif %}
+            </span>
+          </td>
+          <td>
+            <div style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">
+              {{ q.question_text }}
+            </div>
+            {% if q.question_image %}
+            <span class="badge badge-neutral" style="font-size: 0.7rem; margin-top: 0.2rem;"><i class="fas fa-image"></i> Ada Gambar</span>
+            {% endif %}
+          </td>
+          <td>
+            <code style="background: var(--light-100); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; color: var(--primary-800);">
+              {{ q.correct_answer }}
+            </code>
+          </td>
+          <td>
+            <div>
+              <span class="badge badge-{% if q.difficulty_level == 'mudah' %}success{% elif q.difficulty_level == 'sedang' %}primary{% else %}danger{% endif %}">
+                {{ q.difficulty_level }}
+              </span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+              b: {{ q.irt_b }} | a: {{ q.irt_a }}
+            </div>
+          </td>
+          <td style="text-align: right;">
+            <a href="{{ url_for('supervisor.question_preview', question_id=q.id) }}" class="btn btn-secondary btn-sm" title="Preview Tampilan">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ url_for('supervisor.question_edit', question_id=q.id) }}" class="btn btn-secondary btn-sm" title="Edit Soal">
+              <i class="fas fa-edit"></i>
+            </a>
+            <form method="POST" action="{{ url_for('supervisor.question_delete', question_id=q.id) }}" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus soal #{{ q.id }}?');">
+              <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger-600);" title="Hapus Soal">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+            Tidak ada butir soal yang sesuai dengan filter.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

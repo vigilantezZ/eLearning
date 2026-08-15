@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola Struktur Soal 3-Tier (T1 - T3) - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-sitemap" style="color: var(--primary-600);"></i> Struktur Ujian 3-Tier (T1 - T3)
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Atur pengelompokan hierarki: <b>Tier 1</b> (Kelompok Ujian), <b>Tier 2</b> (Subtes & Timer Independen), dan <b>Tier 3</b> (Topik / Kompetensi Opsional).
+      </p>
+    </div>
+    <a href="{{ url_for('supervisor.dashboard') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Kembali ke Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Add Forms Accordion / Grid -->
+<div class="grid-3" style="margin-bottom: 2.5rem;">
+  <!-- Tier 1 Form -->
+  <div class="card" style="border-top: 4px solid var(--primary-600);">
+    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-700); margin-bottom: 1rem;">
+      <i class="fas fa-layer-group"></i> Tambah Tier 1 (Kelompok)
+    </h3>
+    <form method="POST" action="{{ url_for('supervisor.add_test_group') }}">
+      <div class="form-group">
+        <label class="form-label">Nama Kelompok Ujian</label>
+        <input type="text" name="name" class="form-control" placeholder="Contoh: Tes Potensi Skolastik (TPS)" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kode Singkatan</label>
+        <input type="text" name="code" class="form-control" placeholder="TPS">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deskripsi</label>
+        <textarea name="description" class="form-control" rows="2" placeholder="Deskripsi singkat kelompok ujian"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%;">
+        <i class="fas fa-plus"></i> Simpan Tier 1
+      </button>
+    </form>
+  </div>
+
+  <!-- Tier 2 Form -->
+  <div class="card" style="border-top: 4px solid var(--accent-500);">
+    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--accent-600); margin-bottom: 1rem;">
+      <i class="fas fa-folder-open"></i> Tambah Tier 2 (Subtes) [Wajib]
+    </h3>
+    <form method="POST" action="{{ url_for('supervisor.add_subtest') }}">
+      <div class="form-group">
+        <label class="form-label">Pilih Kelompok (Tier 1)</label>
+        <select name="test_group_id" class="form-control" required>
+          <option value="">-- Pilih Tier 1 --</option>
+          {% for g in groups %}
+          <option value="{{ g.id }}">{{ g.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Subtes</label>
+        <input type="text" name="name" class="form-control" placeholder="Contoh: Kemampuan Penalaran Umum" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Durasi Timer Default (Menit)</label>
+        <input type="number" name="default_duration_minutes" class="form-control" value="25" min="1" required>
+      </div>
+      <button type="submit" class="btn btn-success" style="width: 100%;">
+        <i class="fas fa-plus"></i> Simpan Tier 2
+      </button>
+    </form>
+  </div>
+
+  <!-- Tier 3 Form -->
+  <div class="card" style="border-top: 4px solid var(--warning-500);">
+    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--warning-600); margin-bottom: 1rem;">
+      <i class="fas fa-tags"></i> Tambah Tier 3 (Topik) [Opsional]
+    </h3>
+    <form method="POST" action="{{ url_for('supervisor.add_topic') }}">
+      <div class="form-group">
+        <label class="form-label">Pilih Subtes (Tier 2)</label>
+        <select name="subtest_id" class="form-control" required>
+          <option value="">-- Pilih Tier 2 --</option>
+          {% for s in subtests %}
+          <option value="{{ s.id }}">{{ s.test_group.name }} &rarr; {{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Topik / Materi</label>
+        <input type="text" name="name" class="form-control" placeholder="Contoh: Penalaran Induktif" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deskripsi</label>
+        <textarea name="description" class="form-control" rows="2" placeholder="Kompetensi spesifik materi"></textarea>
+      </div>
+      <button type="submit" class="btn btn-warning" style="width: 100%;">
+        <i class="fas fa-plus"></i> Simpan Tier 3
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Hierarchical Tree View Display -->
+<h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-bottom: 1rem;">
+  <i class="fas fa-network-wired"></i> Hierarki Struktur Ujian Saat Ini
+</h2>
+
+<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+  {% for g in groups %}
+  <div class="card" style="padding: 1.5rem; border: 1px solid var(--primary-200); background: white;">
+    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--light-200); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="badge badge-primary" style="font-size: 0.85rem;">TIER 1</span>
+        <h3 style="font-weight: 800; font-size: 1.25rem; color: var(--primary-900);">{{ g.name }}</h3>
+        {% if g.code %}<span class="badge badge-neutral">{{ g.code }}</span>{% endif %}
+      </div>
+      <form method="POST" action="{{ url_for('supervisor.delete_structure_item', tier='group', item_id=g.id) }}" onsubmit="return confirm('Hapus Kelompok Ujian ini beserta seluruh subtes di dalamnya?');">
+        <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Hapus T1</button>
+      </form>
+    </div>
+
+    <!-- Subtests list (Tier 2) -->
+    <div style="display: flex; flex-direction: column; gap: 1rem; margin-left: 1.5rem;">
+      {% for s in g.subtests %}
+      <div style="background: var(--light-50); border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 1rem 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span class="badge badge-success">TIER 2 (Subtes)</span>
+            <span style="font-weight: 700; font-size: 1.05rem; color: var(--dark-900);">{{ s.name }}</span>
+            <span class="badge badge-neutral"><i class="fas fa-stopwatch"></i> Timer: {{ s.default_duration_minutes }} Menit</span>
+            <span class="badge badge-primary">{{ s.questions.count() }} Soal di Bank</span>
+          </div>
+          <form method="POST" action="{{ url_for('supervisor.delete_structure_item', tier='subtest', item_id=s.id) }}" onsubmit="return confirm('Hapus subtes ini?');">
+            <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger-600);"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+
+        <!-- Topics list (Tier 3) -->
+        <div style="margin-left: 1.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--light-300);">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem;">
+            <i class="fas fa-tags"></i> Topik / Kompetensi (Tier 3 Opsional):
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            {% for t in s.topics %}
+            <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: white; border: 1px solid var(--light-300); border-radius: var(--radius-sm); padding: 0.25rem 0.6rem; font-size: 0.825rem;">
+              <span>{{ t.name }}</span>
+              <form method="POST" action="{{ url_for('supervisor.delete_structure_item', tier='topic', item_id=t.id) }}" style="display: inline;" onsubmit="return confirm('Hapus topik ini?');">
+                <button type="submit" style="background: none; border: none; color: var(--danger-500); cursor: pointer; padding: 0; font-size: 0.75rem;"><i class="fas fa-times"></i></button>
+              </form>
+            </div>
+            {% else %}
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">Belum ada topik khusus (SPV dapat langsung menambahkan soal ke Subtes).</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div style="color: var(--text-muted); font-size: 0.875rem; font-style: italic;">Belum ada subtes di kelompok ini.</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+    <i class="fas fa-folder-plus" style="font-size: 3rem; margin-bottom: 1rem; color: var(--light-300);"></i>
+    <h3>Belum Ada Struktur Ujian</h3>
+    <p>Silakan tambahkan Kelompok Ujian (Tier 1) dan Subtes (Tier 2) menggunakan formulir di atas.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

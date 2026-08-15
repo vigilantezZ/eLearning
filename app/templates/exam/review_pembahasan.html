@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Pembahasan & Kunci Jawaban: {{ package.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 1rem auto 3rem auto;">
+  
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-book-reader" style="color: var(--primary-600);"></i> Pembahasan & Kunci Jawaban
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">
+        {{ package.title }} &bull; Peserta: <b>{{ session.user.full_name }}</b>
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('exam.result', session_id=session.id) }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Kembali ke Lembar Nilai
+      </a>
+      <a href="{{ url_for('exam.catalog') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-home"></i> Katalog
+      </a>
+    </div>
+  </div>
+
+  <!-- Grouped Subtests Loop -->
+  {% for sub_id, sub_data in subtest_grouped.items() %}
+  {% set subtest = sub_data.subtest %}
+  {% set answers = sub_data.answers %}
+
+  <div style="margin-bottom: 2.5rem;">
+    <div style="background: var(--primary-900); color: white; padding: 0.85rem 1.5rem; border-radius: var(--radius-md) var(--radius-md) 0 0; display: flex; align-items: center; justify-content: space-between;">
+      <div style="font-weight: 800; font-size: 1.1rem;">
+        {{ subtest.test_group.name if subtest.test_group else '' }} &rarr; {{ subtest.name }}
+      </div>
+      <span class="badge badge-primary" style="background: rgba(255,255,255,0.2); color: white;">
+        {{ answers|length }} Butir Soal
+      </span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1.5rem; background: var(--light-50); border: 1px solid var(--light-200); border-top: none; padding: 1.5rem; border-radius: 0 0 var(--radius-md) var(--radius-md);">
+      
+      {% for ans in answers %}
+      {% set q = ans.question %}
+      {% set is_correct = ans.is_correct %}
+      {% set user_val = ans.user_answer %}
+
+      <div class="card" style="border-left: 5px solid {% if is_correct %}var(--success-500){% elif user_val in [None, '', [], 'null'] %}var(--dark-500){% else %}var(--danger-500){% endif %};">
+        
+        <!-- Question Item Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="badge badge-primary">Soal #{{ loop.index }}</span>
+            <span class="badge badge-neutral">{{ q.question_type }}</span>
+            {% if q.topic %}<span class="badge badge-neutral">{{ q.topic.name }}</span>{% endif %}
+          </div>
+          <div>
+            {% if is_correct %}
+              <span class="badge badge-success"><i class="fas fa-check-circle"></i> Benar (+IRT)</span>
+            {% elif user_val in [None, '', [], 'null'] %}
+              <span class="badge badge-neutral"><i class="fas fa-minus-circle"></i> Tidak Dijawab</span>
+            {% else %}
+              <span class="badge badge-danger"><i class="fas fa-times-circle"></i> Salah</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Question Text -->
+        <div style="font-size: 1rem; line-height: 1.7; color: var(--text-main); margin-bottom: 1.25rem;">
+          {{ q.question_text }}
+        </div>
+
+        {% if q.question_image %}
+        <div class="question-image-box" style="max-width: 500px; margin-bottom: 1.25rem;">
+          <img src="/static/uploads/questions/{{ q.question_image }}" alt="Gambar Soal">
+        </div>
+        {% endif %}
+
+        <!-- Answer Comparison Box -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: var(--light-50); border: 1px solid var(--light-200); border-radius: var(--radius-sm); padding: 0.85rem 1.25rem; margin-bottom: 1.25rem; font-size: 0.9rem;">
+          <div>
+            <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">Jawaban Anda:</span>
+            <b style="font-size: 1.05rem; color: {% if is_correct %}var(--success-700){% elif user_val in [None, '', [], 'null'] %}var(--text-muted){% else %}var(--danger-700){% endif %};">
+              {{ user_val if user_val not in [None, '', [], 'null'] else '(Tidak dijawab)' }}
+            </b>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">Kunci Jawaban Benar:</span>
+            <b style="font-size: 1.05rem; color: var(--primary-800);">{{ q.correct_answer }}</b>
+          </div>
+        </div>
+
+        <!-- Explanation (Pembahasan) Box -->
+        <div style="background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h4 style="font-weight: 800; font-size: 0.95rem; color: var(--primary-900); margin-bottom: 0.5rem;">
+            <i class="fas fa-lightbulb" style="color: #f59e0b;"></i> Pembahasan & Solusi:
+          </h4>
+          
+          <div style="font-size: 0.925rem; line-height: 1.7; color: var(--dark-900); white-space: pre-line;">
+            {{ q.explanation_text or 'Pembahasan teks belum tersedia untuk soal ini.' }}
+          </div>
+
+          {% if q.explanation_image %}
+          <div style="max-width: 480px; margin-top: 1rem; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--primary-200);">
+            <img src="/static/uploads/explanations/{{ q.explanation_image }}" alt="Lampiran Pembahasan" style="width: 100%; display: block;">
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

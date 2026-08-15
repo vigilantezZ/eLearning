@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Manajemen Paket Tryout - Admin BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-layer-group" style="color: var(--primary-600);"></i> Manajemen Paket Tryout
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Kelola paket tryout, timer per subtes independen, pemilihan butir soal, dan publikasi.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('admin.package_new') }}" class="btn btn-primary">
+        <i class="fas fa-plus-circle"></i> Buat Paket Baru
+      </a>
+      <a href="{{ url_for('admin.irt_calculator') }}" class="btn btn-warning">
+        <i class="fas fa-calculator"></i> Kalkulator IRT
+      </a>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Packages Cards Grid -->
+<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+  {% for pkg in packages %}
+  <div class="card" style="padding: 1.75rem; border-left: 4px solid {% if pkg.is_published %}var(--success-500){% else %}var(--light-300){% endif %};">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem;">
+          <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main);">{{ pkg.title }}</h2>
+          {% if pkg.is_published %}
+            <span class="badge badge-success"><i class="fas fa-check"></i> Terbit</span>
+          {% else %}
+            <span class="badge badge-neutral"><i class="fas fa-pencil-alt"></i> Draf</span>
+          {% endif %}
+
+          {% if pkg.is_irt_calculated %}
+            <span class="badge badge-primary"><i class="fas fa-chart-line"></i> IRT Terkalibrasi</span>
+          {% else %}
+            <span class="badge badge-warning"><i class="fas fa-clock"></i> IRT Belum Dihitung</span>
+          {% endif %}
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 800px;">
+          {{ pkg.description or 'Tidak ada deskripsi tambahan.' }}
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem;">
+        <a href="{{ url_for('admin.package_edit', package_id=pkg.id) }}" class="btn btn-secondary btn-sm">
+          <i class="fas fa-edit"></i> Edit Paket
+        </a>
+        <a href="{{ url_for('admin.irt_calculator', package_id=pkg.id) }}" class="btn btn-warning btn-sm">
+          <i class="fas fa-calculator"></i> IRT Score
+        </a>
+        <form method="POST" action="{{ url_for('admin.package_delete', package_id=pkg.id) }}" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus paket tryout {{ pkg.title }}?');">
+          <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger-600);">
+            <i class="fas fa-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Subtests with Dedicated Timers Table -->
+    <div style="background: var(--light-50); border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1rem;">
+      <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.6rem;">
+        <i class="fas fa-stopwatch" style="color: var(--primary-600);"></i> Subtes & Timer Independen yang Diujikan ({{ pkg.package_subtests|length }} Subtes):
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+        {% for ts in pkg.package_subtests %}
+        <div style="background: white; border: 1px solid var(--light-300); border-radius: var(--radius-sm); padding: 0.4rem 0.75rem; font-size: 0.825rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-weight: 700; color: var(--primary-800);">{{ loop.index }}. {{ ts.subtest.name }}</span>
+          <span class="badge badge-neutral"><i class="fas fa-clock"></i> {{ ts.duration_minutes }} Menit</span>
+        </div>
+        {% else %}
+        <div style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Belum ada subtes yang ditambahkan ke paket ini.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Summary Stats Footer -->
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; font-size: 0.875rem; color: var(--text-muted); border-top: 1px solid var(--light-200); padding-top: 0.85rem;">
+      <div style="display: flex; gap: 1.5rem;">
+        <div><i class="fas fa-question-circle"></i> <b>{{ pkg.total_questions_count }}</b> Butir Soal</div>
+        <div><i class="fas fa-hourglass-half"></i> Total Durasi: <b>{{ pkg.total_duration_minutes }}</b> Menit</div>
+        <div><i class="fas fa-user-check"></i> Peserta Selesai: <b>{{ pkg.exam_sessions.filter_by(status='completed').count() }}</b></div>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem;">
+        <a href="{{ url_for('exam.package_detail', package_id=pkg.id) }}" class="btn btn-secondary btn-sm" target="_blank">
+          <i class="fas fa-external-link-alt"></i> Halaman Peserta
+        </a>
+        <a href="{{ url_for('exam.leaderboard', package_id=pkg.id) }}" class="btn btn-secondary btn-sm" target="_blank">
+          <i class="fas fa-trophy"></i> Leaderboard
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+    <i class="fas fa-folder-open" style="font-size: 3rem; margin-bottom: 1rem; color: var(--light-300);"></i>
+    <h3>Belum Ada Paket Tryout</h3>
+    <p>Silakan buat paket tryout baru menggunakan tombol di atas.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

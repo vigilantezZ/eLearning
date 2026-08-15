@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Analisis Statistik & Leaderboard - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-chart-line" style="color: var(--primary-600);"></i> Analisis Statistik & Leaderboard
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Evaluasi hasil penilaian IRT, performa rata-rata per subtes, dan peringkat peserta.</p>
+    </div>
+
+    <!-- Package Selector Dropdown -->
+    <form method="GET" action="{{ url_for('supervisor.analytics') }}" style="display: flex; align-items: center; gap: 0.5rem;">
+      <label class="form-label" style="margin: 0; white-space: nowrap; font-size: 0.85rem;">Pilih Paket Tryout:</label>
+      <select name="package_id" class="form-control" onchange="this.form.submit()" style="min-width: 240px;">
+        {% for pkg in packages %}
+        <option value="{{ pkg.id }}" {% if selected_package and selected_package.id == pkg.id %}selected{% endif %}>
+          {{ pkg.title }}
+        </option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+{% if selected_package %}
+  <!-- Package Header Stats -->
+  <div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="card" style="border-left: 4px solid var(--primary-600);">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Peserta Selesai</div>
+      <div style="font-size: 2.2rem; font-weight: 800; color: var(--primary-700); margin: 0.2rem 0;">{{ sessions|length }}</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Telah menyelesaikan ujian</div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--success-500);">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Status Skoring IRT</div>
+      <div style="font-size: 1.4rem; font-weight: 800; color: var(--success-700); margin: 0.5rem 0;">
+        {% if selected_package.is_irt_calculated %}
+          <i class="fas fa-check-circle"></i> Terkalibrasi
+        {% else %}
+          <span style="color: var(--warning-600);"><i class="fas fa-clock"></i> Belum Dikalibrasi</span>
+        {% endif %}
+      </div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Item Response Theory Model</div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-500);">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Jumlah Subtes (T2)</div>
+      <div style="font-size: 2.2rem; font-weight: 800; color: var(--accent-600); margin: 0.2rem 0;">{{ subtest_stats|length }}</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Dengan timer independen</div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--warning-500);">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Butir Soal</div>
+      <div style="font-size: 2.2rem; font-weight: 800; color: var(--warning-600); margin: 0.2rem 0;">{{ selected_package.total_questions_count }}</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Diujikan dalam paket ini</div>
+    </div>
+  </div>
+
+  <!-- Subtest Performance Breakdown -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem;">
+      <i class="fas fa-layer-group"></i> Rata-Rata Performa Skor per Subtes (Tier 2)
+    </h3>
+
+    <div class="grid-3">
+      {% for st in subtest_stats %}
+      <div style="background: var(--light-50); border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--primary-800);">{{ st.subtest.name }}</h4>
+          <span class="badge badge-neutral"><i class="fas fa-clock"></i> {{ st.duration }} Menit</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+          <span style="font-size: 1.8rem; font-weight: 800; color: var(--text-main);">{{ st.avg_irt }}</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">/ 1000 (Skor IRT Rata-rata)</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem;">
+          Rata-rata benar: <b>{{ st.avg_raw }}</b> butir soal
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Leaderboard Table -->
+  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+      <h3 style="font-weight: 700; font-size: 1.15rem; color: var(--text-main);">
+        <i class="fas fa-trophy" style="color: var(--warning-500);"></i> Peringkat & Hasil Ujian Peserta
+      </h3>
+      <a href="{{ url_for('exam.leaderboard', package_id=selected_package.id) }}" class="btn btn-secondary btn-sm" target="_blank">
+        <i class="fas fa-external-link-alt"></i> Halaman Publik
+      </a>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 80px; text-align: center;">Rank</th>
+            <th>Nama Lengkap Peserta</th>
+            <th>Asal Sekolah & Kelas</th>
+            <th>Jawaban Benar</th>
+            <th>Skor Terstandarisasi IRT</th>
+            <th>Waktu Submit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td style="text-align: center;">
+              {% if s.national_rank == 1 %}
+                <span style="font-size: 1.2rem; color: #eab308;"><i class="fas fa-crown"></i> 1</span>
+              {% elif s.national_rank == 2 %}
+                <span style="font-size: 1.1rem; color: #94a3b8;"><i class="fas fa-medal"></i> 2</span>
+              {% elif s.national_rank == 3 %}
+                <span style="font-size: 1.1rem; color: #b45309;"><i class="fas fa-medal"></i> 3</span>
+              {% else %}
+                <span style="font-weight: 700; color: var(--text-muted);">#{{ s.national_rank or loop.index }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <img src="{{ s.user.avatar_url }}" alt="{{ s.user.full_name }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                <div>
+                  <div style="font-weight: 700; color: var(--text-main);">{{ s.user.full_name }}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ s.user.username }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div style="font-weight: 600; font-size: 0.875rem;">{{ s.user.school or '-' }}</div>
+              <div style="font-size: 0.775rem; color: var(--text-muted);">{{ s.user.grade or '-' }}</div>
+            </td>
+            <td>
+              <b>{{ s.total_raw_score | int }}</b> / {{ selected_package.total_questions_count }} Soal
+            </td>
+            <td>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary-700);">
+                {{ s.total_irt_score | format_score }}
+              </div>
+            </td>
+            <td style="font-size: 0.85rem; color: var(--text-muted);">
+              {{ s.submitted_at | datetime_format }}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+              Belum ada data peserta yang menyelesaikan paket tryout ini.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% else %}
+  <div class="card" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+    <i class="fas fa-chart-bar" style="font-size: 3rem; margin-bottom: 1rem; color: var(--light-300);"></i>
+    <h3>Belum Ada Paket Tryout</h3>
+    <p>Silakan buat paket tryout terlebih dahulu pada panel Administrator.</p>
+  </div>
+{% endif %}
+{% endblock %}

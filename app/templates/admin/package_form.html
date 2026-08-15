@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}{% if package %}Edit Paket: {{ package.title }}{% else %}Buat Paket Tryout Baru{% endif %} - Admin BMP CBT{% endblock %}
+
+{% block content %}
+<div style="max-width: 950px; margin: 0 auto 2rem auto;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-folder-plus" style="color: var(--primary-600);"></i> {% if package %}Edit Paket Tryout{% else %}Buat Paket Tryout Baru{% endif %}
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Atur durasi timer mandiri per subtes, jadwal buka/tutup, dan pilih butir-butir soal.</p>
+    </div>
+    <a href="{{ url_for('admin.packages') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Kembali
+    </a>
+  </div>
+
+  <form method="POST" class="card" style="padding: 2rem;">
+    
+    <!-- Section 1: Package Basic Information -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin-bottom: 1.25rem; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+      <i class="fas fa-info-circle"></i> 1. Informasi Umum Paket
+    </h3>
+
+    <div class="form-group">
+      <label class="form-label" for="title">Judul Paket Tryout <span style="color: var(--danger-500);">*</span></label>
+      <input type="text" id="title" name="title" class="form-control" placeholder="Contoh: Tryout Akbar UTBK-SNBT 2026 - Paket 1" value="{{ package.title if package else '' }}" required>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="description">Deskripsi & Petunjuk Pengerjaan</label>
+      <textarea id="description" name="description" class="form-control" rows="3" placeholder="Informasi singkat atau petunjuk umum bagi peserta...">{{ package.description if package else '' }}</textarea>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label" for="start_time">Jadwal Mulai Buka (Opsional)</label>
+        <input type="datetime-local" id="start_time" name="start_time" class="form-control" value="{{ package.start_time.strftime('%Y-%m-%dT%H:%M') if package and package.start_time else '' }}">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="end_time">Jadwal Ditutup (Opsional)</label>
+        <input type="datetime-local" id="end_time" name="end_time" class="form-control" value="{{ package.end_time.strftime('%Y-%m-%dT%H:%M') if package and package.end_time else '' }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-weight: 600;">
+        <input type="checkbox" name="is_published" value="1" {% if package and package.is_published %}checked{% endif %}>
+        Publikasikan paket ini agar dapat dilihat & dikerjakan oleh peserta
+      </label>
+    </div>
+
+    <!-- Section 2: Subtests & Independent Timers -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 2rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+      <i class="fas fa-stopwatch"></i> 2. Pilih Subtes (Tier 2) & Atur Timer Mandiri per Subtes
+    </h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+      Centang subtes yang ingin dimasukkan ke dalam paket ujian ini, lalu tentukan <b>durasi timer countdown (menit)</b> untuk masing-masing subtes.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
+      {% for s in subtests %}
+      {% set is_selected = s.id in selected_subtest_ids %}
+      {% set custom_duration = subtest_durations.get(s.id, s.default_duration_minutes) if subtest_durations else s.default_duration_minutes %}
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: var(--light-50); border: 1px solid var(--light-200); padding: 0.85rem 1.25rem; border-radius: var(--radius-md);">
+        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 700; flex: 1; min-width: 250px;">
+          <input type="checkbox" name="subtest_ids" value="{{ s.id }}" class="subtest-checkbox" data-subtest-id="{{ s.id }}" {% if is_selected %}checked{% endif %}>
+          <div>
+            <div>{{ s.name }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">
+              {{ s.test_group.name }} &bull; Tersedia {{ s.questions.count() }} Soal di Bank
+            </div>
+          </div>
+        </label>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <label style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap;">Timer Subtes:</label>
+          <input type="number" name="duration_{{ s.id }}" class="form-control" style="width: 90px; text-align: center;" value="{{ custom_duration }}" min="1">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">Menit</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Section 3: Select Questions from Question Bank -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 2rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+      <i class="fas fa-tasks"></i> 3. Pilih Butir Soal yang Diujikan
+    </h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+      Pilih butir soal yang akan ditampilkan kepada peserta saat mengerjakan paket ini.
+    </p>
+
+    <div style="max-height: 450px; overflow-y: auto; border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 1rem; background: var(--light-50);">
+      {% for q in questions %}
+      {% set is_q_selected = q.id in selected_question_ids %}
+      <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; border-bottom: 1px solid var(--light-200); background: white; margin-bottom: 0.5rem; border-radius: var(--radius-sm);">
+        <input type="checkbox" name="question_ids" value="{{ q.id }}" {% if is_q_selected %}checked{% endif %} style="margin-top: 0.3rem;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+            <span class="badge badge-primary">#{{ q.id }}</span>
+            <span class="badge badge-neutral">{{ q.subtest.name if q.subtest else '-' }}</span>
+            <span class="badge badge-{% if q.question_type == 'pg' %}primary{% elif q.question_type == 'pg_kompleks' %}warning{% else %}success{% endif %}">
+              {{ q.question_type }}
+            </span>
+          </div>
+          <div style="font-size: 0.9rem; color: var(--text-main); font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+            {{ q.question_text }}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+        Belum ada butir soal di Bank Soal. Tambahkan soal melalui Portal Supervisor terlebih dahulu.
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+      <a href="{{ url_for('admin.packages') }}" class="btn btn-secondary">Batal</a>
+      <button type="submit" class="btn btn-primary btn-lg">
+        <i class="fas fa-save"></i> {% if package %}Simpan Perubahan Paket{% else %}Buat & Simpan Paket{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

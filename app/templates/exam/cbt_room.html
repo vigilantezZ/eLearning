@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CBT Ujian: {{ active_subtest.name }} - {{ package.title }}</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  
+  <!-- MathJax for rendering math formulas -->
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body class="cbt-body" style="background-color: var(--bg-main);">
+
+  <!-- CBT Sticky Header -->
+  <header class="cbt-header">
+    <div style="display: flex; align-items: center; gap: 0.85rem;">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Beasiswa Muda Purbalingga" style="width: 38px; height: 38px; object-fit: contain;">
+      <div>
+        <div style="font-size: 0.775rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+          {{ active_subtest.test_group.name if active_subtest.test_group else 'BMP CBT EXAM' }} (Subtes {{ current_subtest_index + 1 }} dari {{ total_subtests }})
+        </div>
+        <div style="font-weight: 800; font-size: 1.15rem; color: white;">
+          {{ active_subtest.name }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Autosave Status -->
+    <div id="autosave-status" style="font-size: 0.85rem; font-weight: 600;">
+      <span class="text-muted"><i class="fas fa-check-circle" style="color: var(--success-500);"></i> Siap</span>
+    </div>
+
+    <!-- Right Timer Box -->
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div id="cbt-timer-container" class="cbt-timer-box">
+        <i class="fas fa-stopwatch"></i>
+        <span id="timer-display">--:--</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CBT Main Content Layout -->
+  <div class="container" style="max-width: 1400px; padding: 1.5rem;">
+    <div class="cbt-layout">
+      
+      <!-- Left Column: Question Area -->
+      <div>
+        <div class="question-card">
+          <!-- Questions Viewport -->
+          <div id="questions-viewport">
+            {% for item in questions_in_subtest %}
+            {% set q = item.question %}
+            {% set ans = item.answer %}
+            {% set user_ans = ans.user_answer if ans else None %}
+            {% set is_doubtful = ans.is_marked_doubtful if ans else False %}
+
+            <div class="cbt-question-card" 
+                 id="card-q-{{ loop.index0 }}" 
+                 data-question-id="{{ q.id }}" 
+                 data-question-type="{{ q.question_type }}" 
+                 data-is-doubtful="{{ 'true' if is_doubtful else 'false' }}"
+                 style="display: {% if loop.first %}block{% else %}none{% endif %};">
+              
+              <!-- Top Question Header -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid var(--light-200); padding-bottom: 0.85rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <span class="badge badge-primary" style="font-size: 0.9rem; padding: 0.35rem 0.8rem;">
+                    Soal No. {{ item.order }}
+                  </span>
+                  <span class="badge badge-neutral">
+                    {% if q.question_type == 'pg' %}Pilihan Ganda (A-E){% elif q.question_type == 'pg_kompleks' %}Pilihan Berganda (Checklist){% else %}Isian Singkat{% endif %}
+                  </span>
+                  {% if q.topic %}
+                  <span class="badge badge-neutral">{{ q.topic.name }}</span>
+                  {% endif %}
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                  Total Subtes ini: <b>{{ questions_in_subtest|length }} Soal</b>
+                </div>
+              </div>
+
+              <!-- Question Text & Image -->
+              <div class="question-text-area">
+                {{ q.question_text }}
+              </div>
+
+              {% if q.question_image %}
+              <div class="question-image-box" style="max-width: 550px; margin: 1rem 0;">
+                <img src="/static/uploads/questions/{{ q.question_image }}" alt="Lampiran Soal #{{ q.id }}" style="max-width: 100%; border-radius: 8px; border: 1px solid var(--light-200);">
+              </div>
+              {% endif %}
+
+              <!-- Options by Question Type -->
+              <div style="margin-top: 1.5rem;">
+                
+                <!-- 1. Pilihan Ganda Tunggal (PG) -->
+                {% if q.question_type == 'pg' %}
+                  {% for opt in q.options %}
+                  {% set is_opt_selected = (user_ans == opt.key) %}
+                  <div class="option-item option-item-pg {% if is_opt_selected %}selected{% endif %}" data-key="{{ opt.key }}">
+                    <div class="option-key-badge">{{ opt.key }}</div>
+                    <div style="font-size: 1rem; line-height: 1.5; color: var(--text-main); flex: 1;">
+                      {{ opt.text }}
+                    </div>
+                    <input type="radio" name="radio_ans_{{ q.id }}" value="{{ opt.key }}" style="display: none;" {% if is_opt_selected %}checked{% endif %}>
+                  </div>
+                  {% endfor %}
+
+                <!-- 2. Pilihan Berganda Kompleks (Checklist) -->
+                {% elif q.question_type == 'pg_kompleks' %}
+                  <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                    <i class="fas fa-info-circle"></i> Anda dapat mencentang lebih dari satu jawaban yang benar:
+                  </p>
+                  {% set user_ans_list = user_ans if user_ans is iterable and not user_ans is string else ([user_ans] if user_ans else []) %}
+                  {% for opt in q.options %}
+                  {% set is_k_selected = (opt.key in user_ans_list) %}
+                  <div class="option-item option-item-kompleks {% if is_k_selected %}selected{% endif %}" data-key="{{ opt.key }}">
+                    <div class="option-key-badge" style="border-radius: 4px;">
+                      <input type="checkbox" name="cb_ans_{{ q.id }}" value="{{ opt.key }}" {% if is_k_selected %}checked{% endif %}>
+                    </div>
+                    <div style="font-size: 1rem; line-height: 1.5; color: var(--text-main); flex: 1;">
+                      {{ opt.text }}
+                    </div>
+                  </div>
+                  {% endfor %}
+
+                <!-- 3. Isian Singkat -->
+                {% elif q.question_type == 'isian' %}
+                  <div style="max-width: 450px; background: var(--light-50); border: 1px solid var(--light-200); padding: 1.25rem; border-radius: var(--radius-md);">
+                    <label class="form-label" style="font-weight: 700;">Jawaban Singkat Anda (Angka / Kata):</label>
+                    <input type="text" class="form-control isian-input" placeholder="Ketikkan jawaban Anda di sini..." value="{{ user_ans or '' }}" style="font-size: 1.1rem; font-weight: 600;">
+                    <small style="color: var(--text-muted); display: block; margin-top: 0.4rem;">
+                      Jawaban akan tersimpan otomatis saat Anda mengetik atau berpindah soal.
+                    </small>
+                  </div>
+                {% endif %}
+
+              </div>
+            </div>
+            {% else %}
+            <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+              Tidak ada butir soal dalam subtes ini.
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Unified Bottom Action Navigation Bar -->
+          <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--light-200); padding-top: 1.25rem; margin-top: 2rem;">
+            <button type="button" id="btn-prev-q" class="btn btn-secondary">
+              <i class="fas fa-arrow-left"></i> Soal Sebelumnya
+            </button>
+
+            <!-- Doubtful Checkbox -->
+            <label style="display: flex; align-items: center; gap: 0.5rem; background: var(--warning-50); border: 1px solid var(--warning-100); padding: 0.55rem 1rem; border-radius: var(--radius-md); font-weight: 700; color: var(--warning-700); cursor: pointer;">
+              <input type="checkbox" id="check-doubtful">
+              <i class="fas fa-flag"></i> Ragu-Ragu
+            </label>
+
+            <button type="button" id="btn-next-q" class="btn btn-primary">
+              Soal Berikutnya <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Question Palette & Subtest Status -->
+      <div>
+        <div class="palette-card">
+          <!-- Participant Pill -->
+          <div style="display: flex; align-items: center; gap: 0.75rem; padding-bottom: 1rem; border-bottom: 1px solid var(--light-200); margin-bottom: 1rem;">
+            <img src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-500);">
+            <div>
+              <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main); line-height: 1.2;">{{ current_user.full_name }}</div>
+              <div style="font-size: 0.775rem; color: var(--text-muted);">{{ current_user.school or 'Peserta CBT' }}</div>
+            </div>
+          </div>
+
+          <!-- Active Subtest Info -->
+          <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+              Subtes {{ current_subtest_index + 1 }} dari {{ total_subtests }}
+            </div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary-700);">
+              {{ active_subtest.name }}
+            </div>
+          </div>
+
+          <!-- Question Number Palette Grid -->
+          <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">
+            Nomor Soal:
+          </div>
+
+          <div class="palette-grid">
+            {% for item in questions_in_subtest %}
+            {% set q = item.question %}
+            {% set ans = item.answer %}
+            {% set has_ans = ans and ans.user_answer not in (None, '', [], 'null') %}
+            {% set is_doubtful = ans.is_marked_doubtful if ans else False %}
+
+            <button type="button" 
+                    class="palette-btn {% if loop.first %}active{% endif %} {% if is_doubtful %}doubtful{% elif has_ans %}answered{% endif %}" 
+                    data-question-id="{{ q.id }}">
+              {{ loop.index }}
+            </button>
+            {% endfor %}
+          </div>
+
+          <!-- Palette Legend -->
+          <div class="palette-legend">
+            <div class="legend-item">
+              <div class="legend-dot answered"></div>
+              <span>Sudah Terisi</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot doubtful"></div>
+              <span>Ragu-Ragu</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot unanswered"></div>
+              <span>Belum Terisi</span>
+            </div>
+          </div>
+
+          <!-- Next Subtest / Submit Button Action -->
+          <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--light-200);">
+            {% if current_subtest_index + 1 < total_subtests %}
+              <form method="POST" action="{{ url_for('exam.next_subtest', session_id=session.id) }}">
+                <button type="submit" class="btn btn-warning" style="width: 100%; padding: 0.75rem; font-size: 0.9rem;">
+                  <i class="fas fa-step-forward"></i> Selesaikan Subtes & Lanjut
+                </button>
+              </form>
+            {% else %}
+              <form method="POST" action="{{ url_for('exam.submit_exam', session_id=session.id) }}">
+                <button type="submit" class="btn btn-success" style="width: 100%; padding: 0.85rem; font-size: 0.95rem;">
+                  <i class="fas fa-check-double"></i> Kumpulkan Lembar Ujian
+                </button>
+              </form>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CBT Engine Initializer Script -->
+  <script src="{{ url_for('static', filename='js/cbt.js') }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      new CBTEngine({
+        sessionId: {{ session.id }},
+        packageId: {{ package.id }},
+        remainingSeconds: {{ remaining_seconds }},
+        totalQuestions: {{ questions_in_subtest|length }},
+        currentSubtestIndex: {{ current_subtest_index }},
+        totalSubtests: {{ total_subtests }},
+        nextSubtestUrl: "{{ url_for('exam.next_subtest', session_id=session.id) }}",
+        submitExamUrl: "{{ url_for('exam.submit_exam', session_id=session.id) }}",
+        autosaveUrl: "{{ url_for('exam.api_autosave') }}"
+      });
+    });
+  </script>
+</body>
+</html>

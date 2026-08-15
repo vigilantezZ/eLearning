@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Tracking & Riwayat Akun Peserta - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-user-clock" style="color: var(--primary-600);"></i> Tracking & Riwayat Penggunaan Akun
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Pantau progres pengerjaan tryout, rekap hasil ujian, dan timeline performa tiap peserta.</p>
+    </div>
+
+    <!-- Search Form -->
+    <form method="GET" action="{{ url_for('supervisor.user_history') }}" style="display: flex; gap: 0.5rem;">
+      <input type="text" name="search" class="form-control" placeholder="Cari nama / username / sekolah..." value="{{ search or '' }}" style="min-width: 260px;">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Cari</button>
+      {% if search %}
+      <a href="{{ url_for('supervisor.user_history') }}" class="btn btn-secondary"><i class="fas fa-times"></i></a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- Users Cards / Table -->
+<div class="card">
+  <div style="overflow-x: auto;">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Peserta</th>
+          <th>Kontak</th>
+          <th>Asal Sekolah & Jenjang</th>
+          <th>Total Ujian Diikuti</th>
+          <th>Rata-Rata Skor IRT</th>
+          <th style="text-align: right;">Detail & Timeline</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        {% set completed_sessions = u.exam_sessions.filter_by(status='completed').all() %}
+        {% set in_progress_sessions = u.exam_sessions.filter_by(status='in_progress').all() %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <img src="{{ u.avatar_url }}" alt="{{ u.full_name }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-200);">
+              <div>
+                <div style="font-weight: 700; color: var(--text-main);">{{ u.full_name }}</div>
+                <div style="font-size: 0.775rem; color: var(--text-muted);">@{{ u.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div style="font-size: 0.85rem;">{{ u.email }}</div>
+            <div style="font-size: 0.775rem; color: var(--text-muted);">{{ u.phone or '-' }}</div>
+          </td>
+          <td>
+            <div style="font-weight: 600; font-size: 0.875rem;">{{ u.school or '-' }}</div>
+            <div style="font-size: 0.775rem; color: var(--text-muted);">{{ u.grade or '-' }}</div>
+          </td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span class="badge badge-success">{{ completed_sessions|length }} Selesai</span>
+              {% if in_progress_sessions %}
+              <span class="badge badge-warning"><i class="fas fa-spinner fa-spin"></i> {{ in_progress_sessions|length }} Aktif</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            {% if completed_sessions %}
+              {% set total_score = completed_sessions | map(attribute='total_irt_score') | sum %}
+              {% set avg = total_score / (completed_sessions|length) %}
+              <div style="font-weight: 800; font-size: 1.1rem; color: var(--primary-700);">
+                {{ avg | format_score }}
+              </div>
+            {% else %}
+              <span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada nilai</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right;">
+            <a href="{{ url_for('supervisor.user_detail_history', user_id=u.id) }}" class="btn btn-secondary btn-sm">
+              <i class="fas fa-chart-bar"></i> Lihat Timeline & Riwayat &rarr;
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+            Tidak ada data akun peserta yang ditemukan.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

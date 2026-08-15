@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Riwayat Detail Akun: {{ target_user.full_name }} - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <a href="{{ url_for('supervisor.user_history') }}" class="btn btn-secondary btn-sm">
+      <i class="fas fa-arrow-left"></i> Kembali ke Daftar Tracking Akun
+    </a>
+  </div>
+</div>
+
+<!-- User Profile Hero Card -->
+<div class="card" style="margin-bottom: 2rem; padding: 1.75rem; border-left: 4px solid var(--primary-600);">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1.25rem;">
+      <img src="{{ target_user.avatar_url }}" alt="{{ target_user.full_name }}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-500);">
+      <div>
+        <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.2rem;">{{ target_user.full_name }}</h2>
+        <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--text-muted);">
+          <span><i class="fas fa-user"></i> @{{ target_user.username }}</span>
+          <span>&bull;</span>
+          <span><i class="fas fa-envelope"></i> {{ target_user.email }}</span>
+          {% if target_user.phone %}
+          <span>&bull;</span>
+          <span><i class="fab fa-whatsapp"></i> {{ target_user.phone }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 1.5rem; font-size: 0.85rem;">
+      <div>
+        <div style="color: var(--text-muted);">Asal Sekolah:</div>
+        <div style="font-weight: 700; color: var(--text-main);">{{ target_user.school or '-' }}</div>
+      </div>
+      <div>
+        <div style="color: var(--text-muted);">Kelas/Jenjang:</div>
+        <div style="font-weight: 700; color: var(--text-main);">{{ target_user.grade or '-' }}</div>
+      </div>
+      <div>
+        <div style="color: var(--text-muted);">Bergabung Sejak:</div>
+        <div style="font-weight: 700; color: var(--text-main);">{{ target_user.created_at | datetime_format }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2-Column Layout: Exam Sessions Timeline vs Activity Logs -->
+<div class="grid-2" style="align-items: flex-start; gap: 2rem;">
+  
+  <!-- Left Column: Exam Sessions Timeline -->
+  <div>
+    <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 1rem;">
+      <i class="fas fa-file-signature" style="color: var(--primary-600);"></i> Riwayat Pengerjaan Tryout ({{ sessions|length }})
+    </h3>
+
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      {% for s in sessions %}
+      <div class="card" style="padding: 1.25rem; border: 1px solid var(--light-200); background: white;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+          <h4 style="font-weight: 700; font-size: 1.05rem; color: var(--primary-900);">
+            {{ s.tryout_package.title }}
+          </h4>
+          <span class="badge badge-{% if s.status == 'completed' %}success{% else %}warning{% endif %}">
+            {{ s.status }}
+          </span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; background: var(--light-50); padding: 0.75rem 1rem; border-radius: var(--radius-sm); font-size: 0.85rem; margin-bottom: 0.75rem;">
+          <div>
+            <span style="color: var(--text-muted);">Mulai:</span>
+            <b>{{ s.start_time | datetime_format }}</b>
+          </div>
+          <div>
+            <span style="color: var(--text-muted);">Selesai:</span>
+            <b>{{ s.submitted_at | datetime_format }}</b>
+          </div>
+          <div>
+            <span style="color: var(--text-muted);">Skor IRT:</span>
+            <b style="color: var(--primary-700); font-size: 1rem;">{{ s.total_irt_score | format_score }}</b>
+          </div>
+          {% if s.national_rank %}
+          <div>
+            <span style="color: var(--text-muted);">Rank:</span>
+            <b style="color: var(--warning-600);">#{{ s.national_rank }}</b>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Subtest breakdown miniature -->
+        {% if s.subtest_scores %}
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem;">
+          Rincian Skor Subtes:
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+          {% for sub_sc in s.subtest_scores %}
+          <div style="background: white; border: 1px solid var(--light-300); border-radius: 4px; padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+            {{ sub_sc.subtest.name }}: <b>{{ sub_sc.irt_score | format_score }}</b> (Benar: {{ sub_sc.raw_correct }}/{{ sub_sc.raw_total }})
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div style="margin-top: 0.75rem; text-align: right;">
+          <a href="{{ url_for('exam.result', session_id=s.id) }}" class="btn btn-secondary btn-sm" target="_blank">
+            <i class="fas fa-poll"></i> Lihat Lembar Hasil &rarr;
+          </a>
+          <a href="{{ url_for('exam.review_pembahasan', session_id=s.id) }}" class="btn btn-secondary btn-sm" target="_blank" style="margin-left: 0.4rem;">
+            <i class="fas fa-book-reader"></i> Review Jawaban &rarr;
+          </a>
+        </div>
+      </div>
+      {% else %}
+      <div class="card" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        Peserta ini belum mengikuti paket tryout apapun.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Right Column: Activity Logs Audit Trail -->
+  <div>
+    <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 1rem;">
+      <i class="fas fa-stream" style="color: var(--primary-600);"></i> Activity Log & Audit Trail
+    </h3>
+
+    <div class="card" style="padding: 1rem;">
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for log in logs %}
+        <div style="display: flex; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--light-100); font-size: 0.85rem;">
+          <div style="font-size: 1rem; color: var(--primary-600); margin-top: 0.1rem;">
+            {% if log.action == 'LOGIN' %}
+              <i class="fas fa-sign-in-alt"></i>
+            {% elif log.action == 'START_EXAM' %}
+              <i class="fas fa-play-circle"></i>
+            {% elif log.action == 'SUBMIT_EXAM' %}
+              <i class="fas fa-check-circle"></i>
+            {% else %}
+              <i class="fas fa-circle"></i>
+            {% endif %}
+          </div>
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
+              <span class="badge badge-neutral" style="font-size: 0.7rem;">{{ log.action }}</span>
+              <span style="color: var(--text-muted); font-size: 0.75rem;">{{ log.created_at | datetime_format }}</span>
+            </div>
+            <div style="color: var(--text-main); font-size: 0.825rem;">{{ log.details }}</div>
+            {% if log.ip_address %}
+            <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.1rem;">IP: {{ log.ip_address }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+          Belum ada rekaman aktivitas untuk akun ini.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

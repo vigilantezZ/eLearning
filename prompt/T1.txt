@@ -1,0 +1,31 @@
+Buatkan saya sebuah website untuk semacam tryout. pakai flask python saja 
+
+untuk DB sesuaikan saja karena bisa saja menyimpan text dan gambar/foto
+
+
+website butuh user management
+admin : full access & control, bisa menambahkan akun supervisor
+supervisor : hanya bisa menambahkan soal dan jawaban
+selain itu peserta, hanya bisa mengerjakan soal
+
+
+penilaiane pake Item Response Theory (IRT), bentuk soalnya ada 3:
+1. pilihan ganda (a-e)
+2. pilihan berganda (ceklis mana aja yg bener)
+3. isian (khusus angka dan kata sederhana)
+ada 7 subtes seperti pada gambar 1
+
+following gambar 1 terdapat 3 Tier test ya, yaitu misal T1:Tes Potensi Skolastik, T2:Penalaran, 
+	T3: Penalaran induktif
+supervisor bisa menambahkan T1-T3. wajibnya T1-T2, untuk T3 opsional sepertinya, tergantung dari SPV
+mau seperti apa. intinya dibuat fleksibel saja ya.
+btw saya bingung menamakan soal T1-T3 ini, minta tolong bantuannya untuk penamaan tsb
+
+
+Flow peserta:
+1. Bikin akun (peserta)
+2. Input data: email/no.hp, nama lengkap, asal sekolah, kelas, foto diri (opsional)
+3. Peserta milih paket try out yg disediakan admin
+4. Mengerjakan soal sesuai waktu pengerjaan
+5. Dapet nilai setelah semua peserta mengerjakan
+6. Bisa melihat jawaban yg bener tiap soal

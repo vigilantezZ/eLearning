@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Manajemen Pengguna - Admin BMP CBT{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-users-cog" style="color: var(--primary-600);"></i> Manajemen Pengguna
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Kelola seluruh akun Admin, Supervisor (pembuat soal), dan Peserta tryout.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('admin.user_new') }}" class="btn btn-primary">
+        <i class="fas fa-user-plus"></i> Tambah Pengguna Baru
+      </a>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+  <form method="GET" action="{{ url_for('admin.users') }}" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+    <div style="width: 200px;">
+      <label class="form-label" style="font-size: 0.8rem;">Filter Peran (Role)</label>
+      <select name="role" class="form-control" onchange="this.form.submit()">
+        <option value="">-- Semua Peran --</option>
+        <option value="peserta" {% if current_role == 'peserta' %}selected{% endif %}>Peserta</option>
+        <option value="supervisor" {% if current_role == 'supervisor' %}selected{% endif %}>Supervisor</option>
+        <option value="admin" {% if current_role == 'admin' %}selected{% endif %}>Administrator</option>
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 240px;">
+      <label class="form-label" style="font-size: 0.8rem;">Cari Nama, Username, Email, atau Sekolah</label>
+      <input type="text" name="search" class="form-control" placeholder="Ketik kata kunci pencarian..." value="{{ search_query or '' }}">
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary" style="height: 42px;">
+        <i class="fas fa-search"></i> Filter
+      </button>
+      <a href="{{ url_for('admin.users') }}" class="btn btn-secondary" style="height: 42px;" title="Reset Filter">
+        <i class="fas fa-redo"></i>
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+  <div style="overflow-x: auto;">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th style="width: 70px;">ID</th>
+          <th>Pengguna</th>
+          <th>Kontak</th>
+          <th>Asal Sekolah & Kelas</th>
+          <th>Peran (Role)</th>
+          <th>Terdaftar</th>
+          <th style="text-align: right;">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td><b>#{{ u.id }}</b></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <img src="{{ u.avatar_url }}" alt="{{ u.full_name }}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-200);">
+              <div>
+                <div style="font-weight: 700; color: var(--text-main);">{{ u.full_name }}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ u.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div style="font-size: 0.875rem;">{{ u.email }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ u.phone or '-' }}</div>
+          </td>
+          <td>
+            <div style="font-weight: 600; font-size: 0.875rem;">{{ u.school or '-' }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ u.grade or '-' }}</div>
+          </td>
+          <td>
+            <span class="badge badge-{% if u.is_admin %}primary{% elif u.is_supervisor %}warning{% else %}success{% endif %}">
+              {{ u.role }}
+            </span>
+          </td>
+          <td style="font-size: 0.85rem; color: var(--text-muted);">
+            {{ u.created_at | datetime_format('%d %b %Y') }}
+          </td>
+          <td style="text-align: right;">
+            {% if u.is_peserta %}
+            <a href="{{ url_for('supervisor.user_detail_history', user_id=u.id) }}" class="btn btn-secondary btn-sm" title="Tracking Riwayat">
+              <i class="fas fa-history"></i>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('admin.user_edit', user_id=u.id) }}" class="btn btn-secondary btn-sm" title="Edit Pengguna">
+              <i class="fas fa-edit"></i>
+            </a>
+            {% if u.id != current_user.id %}
+            <form method="POST" action="{{ url_for('admin.user_delete', user_id=u.id) }}" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun {{ u.username }}? Seluruh riwayat ujiannya akan ikut terhapus.');">
+              <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger-600);" title="Hapus Pengguna">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+            Tidak ada data pengguna yang sesuai dengan filter.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

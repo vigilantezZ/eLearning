@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard & Peringkat - {{ package.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 1rem auto 3rem auto;">
+  
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+    <div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-trophy" style="color: var(--warning-500);"></i> Leaderboard & Peringkat Nasional
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        {{ package.title }} &bull; Total <b>{{ sessions|length }}</b> Peserta Terkalibrasi
+      </p>
+    </div>
+    <a href="{{ url_for('exam.catalog') }}" class="btn btn-secondary btn-sm">
+      <i class="fas fa-arrow-left"></i> Kembali ke Katalog
+    </a>
+  </div>
+
+  <!-- Top 3 Podium Display -->
+  {% if sessions|length >= 3 %}
+  <div style="display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 1.25rem; align-items: flex-end; margin-bottom: 2.5rem;">
+    
+    <!-- Rank 2: Silver -->
+    {% set s2 = sessions[1] %}
+    <div class="card" style="text-align: center; padding: 1.75rem 1rem; border-top: 5px solid #94a3b8; background: linear-gradient(180deg, #f8fafc, #f1f5f9);">
+      <div style="font-size: 2rem; color: #94a3b8; margin-bottom: 0.5rem;"><i class="fas fa-medal"></i> 2</div>
+      <img src="{{ s2.user.avatar_url }}" alt="{{ s2.user.full_name }}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #94a3b8; margin: 0 auto 0.75rem auto; display: block;">
+      <h4 style="font-weight: 800; font-size: 1.05rem; color: var(--text-main); margin-bottom: 0.2rem;">{{ s2.user.full_name }}</h4>
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">{{ s2.user.school or '-' }}</div>
+      <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary-700);">
+        {{ s2.total_irt_score | format_score }}
+      </div>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Skor IRT</span>
+    </div>
+
+    <!-- Rank 1: Gold (Center & Elevated) -->
+    {% set s1 = sessions[0] %}
+    <div class="card" style="text-align: center; padding: 2.25rem 1rem; border-top: 6px solid #eab308; background: linear-gradient(180deg, #fefce8, #fef08a); transform: translateY(-10px); box-shadow: var(--shadow-lg);">
+      <div style="font-size: 2.5rem; color: #eab308; margin-bottom: 0.5rem;"><i class="fas fa-crown"></i> 1</div>
+      <img src="{{ s1.user.avatar_url }}" alt="{{ s1.user.full_name }}" style="width: 76px; height: 76px; border-radius: 50%; object-fit: cover; border: 4px solid #eab308; margin: 0 auto 0.75rem auto; display: block;">
+      <h3 style="font-weight: 800; font-size: 1.2rem; color: var(--dark-900); margin-bottom: 0.2rem;">{{ s1.user.full_name }}</h3>
+      <div style="font-size: 0.85rem; color: var(--dark-600); margin-bottom: 0.75rem;">{{ s1.user.school or '-' }}</div>
+      <div style="font-size: 1.85rem; font-weight: 800; color: var(--primary-800);">
+        {{ s1.total_irt_score | format_score }}
+      </div>
+      <span style="font-size: 0.8rem; color: var(--dark-600); font-weight: 600;">Skor Tertinggi IRT</span>
+    </div>
+
+    <!-- Rank 3: Bronze -->
+    {% set s3 = sessions[2] %}
+    <div class="card" style="text-align: center; padding: 1.75rem 1rem; border-top: 5px solid #b45309; background: linear-gradient(180deg, #fffbeb, #fef3c7);">
+      <div style="font-size: 2rem; color: #b45309; margin-bottom: 0.5rem;"><i class="fas fa-medal"></i> 3</div>
+      <img src="{{ s3.user.avatar_url }}" alt="{{ s3.user.full_name }}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #b45309; margin: 0 auto 0.75rem auto; display: block;">
+      <h4 style="font-weight: 800; font-size: 1.05rem; color: var(--text-main); margin-bottom: 0.2rem;">{{ s3.user.full_name }}</h4>
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">{{ s3.user.school or '-' }}</div>
+      <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary-700);">
+        {{ s3.total_irt_score | format_score }}
+      </div>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Skor IRT</span>
+    </div>
+
+  </div>
+  {% endif %}
+
+  <!-- Full Ranking Table -->
+  <div class="card">
+    <div style="overflow-x: auto;">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 80px; text-align: center;">Rank</th>
+            <th>Peserta</th>
+            <th>Asal Sekolah & Jenjang</th>
+            <th>Jawaban Benar</th>
+            <th>Skor IRT Standar</th>
+            <th>Waktu Submit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td style="text-align: center;">
+              {% if s.national_rank == 1 %}
+                <span style="font-size: 1.15rem; color: #eab308; font-weight: 800;"><i class="fas fa-crown"></i> 1</span>
+              {% elif s.national_rank == 2 %}
+                <span style="font-size: 1.05rem; color: #94a3b8; font-weight: 800;"><i class="fas fa-medal"></i> 2</span>
+              {% elif s.national_rank == 3 %}
+                <span style="font-size: 1.05rem; color: #b45309; font-weight: 800;"><i class="fas fa-medal"></i> 3</span>
+              {% else %}
+                <span style="font-weight: 700; color: var(--text-muted);">#{{ s.national_rank or loop.index }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <img src="{{ s.user.avatar_url }}" alt="{{ s.user.full_name }}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;">
+                <div>
+                  <div style="font-weight: 700; color: var(--text-main);">{{ s.user.full_name }}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ s.user.username }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div style="font-weight: 600; font-size: 0.875rem;">{{ s.user.school or '-' }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ s.user.grade or '-' }}</div>
+            </td>
+            <td>
+              <b>{{ s.total_raw_score | int }}</b> Soal Benar
+            </td>
+            <td>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary-700);">
+                {{ s.total_irt_score | format_score }}
+              </div>
+            </td>
+            <td style="font-size: 0.85rem; color: var(--text-muted);">
+              {{ s.submitted_at | datetime_format }}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+              Belum ada hasil peserta yang terpublikasi di papan peringkat.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

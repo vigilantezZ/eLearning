@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}{{ package.title }} - Detail Tryout BMP CBT{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 1rem auto 2rem auto;">
+  <div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('exam.catalog') }}" class="btn btn-secondary btn-sm">
+      <i class="fas fa-arrow-left"></i> Kembali ke Katalog Tryout
+    </a>
+  </div>
+
+  <div class="card" style="padding: 2.5rem; border-top: 5px solid var(--primary-600); margin-bottom: 2rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+      <span class="badge badge-primary">SIMULASI CBT UTBK</span>
+      {% if package.is_irt_calculated %}
+        <span class="badge badge-success">SISTEM IRT AKTIF</span>
+      {% endif %}
+    </div>
+
+    <h1 style="font-size: 2rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.75rem;">
+      {{ package.title }}
+    </h1>
+
+    <p style="font-size: 1rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;">
+      {{ package.description or 'Simulasi ujian tryout ini menggunakan format pengerjaan berurutan sesuai alokasi waktu tiap subtes. Jawaban tersimpan secara otomatis.' }}
+    </p>
+
+    <!-- Quick Stats Cards -->
+    <div class="grid-3" style="margin-bottom: 2rem;">
+      <div style="background: var(--light-50); border: 1px solid var(--light-200); padding: 1.25rem; border-radius: var(--radius-md); text-align: center;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Butir Soal</div>
+        <div style="font-size: 2rem; font-weight: 800; color: var(--primary-700); margin: 0.2rem 0;">{{ package.total_questions_count }}</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">PG, PG Kompleks & Isian</div>
+      </div>
+
+      <div style="background: var(--light-50); border: 1px solid var(--light-200); padding: 1.25rem; border-radius: var(--radius-md); text-align: center;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Waktu</div>
+        <div style="font-size: 2rem; font-weight: 800; color: var(--accent-600); margin: 0.2rem 0;">{{ package.total_duration_minutes }}</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">Menit Akumulasi</div>
+      </div>
+
+      <div style="background: var(--light-50); border: 1px solid var(--light-200); padding: 1.25rem; border-radius: var(--radius-md); text-align: center;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subtes Diujikan</div>
+        <div style="font-size: 2rem; font-weight: 800; color: var(--success-600); margin: 0.2rem 0;">{{ package.package_subtests|length }}</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">Timer Independen</div>
+      </div>
+    </div>
+
+    <!-- Subtests Breakdown Table -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-800); margin-bottom: 1rem;">
+      <i class="fas fa-stopwatch"></i> Rincian Subtes & Alokasi Waktu Timer
+    </h3>
+
+    <div style="overflow-x: auto; margin-bottom: 2rem;">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 60px;">Urutan</th>
+            <th>Kelompok (T1)</th>
+            <th>Subtes (T2)</th>
+            <th style="text-align: right;">Durasi Timer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ts in package.package_subtests %}
+          <tr>
+            <td><b>#{{ loop.index }}</b></td>
+            <td><span class="badge badge-primary">{{ ts.subtest.test_group.name }}</span></td>
+            <td><b style="color: var(--dark-900);">{{ ts.subtest.name }}</b></td>
+            <td style="text-align: right;">
+              <span class="badge badge-neutral" style="font-size: 0.85rem;"><i class="fas fa-clock"></i> {{ ts.duration_minutes }} Menit</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Exam Rules / Petunjuk Penting -->
+    <div style="background: var(--warning-50); border: 1px solid var(--warning-100); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 2rem;">
+      <h4 style="font-weight: 700; color: var(--warning-700); font-size: 0.95rem; margin-bottom: 0.5rem;">
+        <i class="fas fa-exclamation-triangle"></i> Ketentuan Penting Simulasi CBT:
+      </h4>
+      <ul style="margin-left: 1.5rem; font-size: 0.875rem; color: var(--dark-800); line-height: 1.6;">
+        <li>Setiap subtes memiliki <b>countdown timer mandiri</b>. Ketika waktu subtes habis, sistem akan otomatis menyimpan jawaban dan mengunci subtes tersebut lalu melanjutkan ke subtes berikutnya.</li>
+        <li>Subtes yang telah selesai dikerjakan <b>tidak dapat dibuka kembali</b> (sesuai mekanisme resmi SNBT).</li>
+        <li>Jawaban Anda tersimpan secara instan (*auto-save*) pada setiap kali memilih opsi atau mengetik isian.</li>
+        <li>Pastikan koneksi internet stabil selama pengerjaan ujian.</li>
+      </ul>
+    </div>
+
+    <!-- Start Exam Action Button -->
+    <div style="text-align: center;">
+      {% if not current_user.is_authenticated %}
+        <a href="{{ url_for('auth.login', next=url_for('exam.package_detail', package_id=package.id)) }}" class="btn btn-primary btn-lg" style="padding: 1rem 3rem;">
+          <i class="fas fa-sign-in-alt"></i> Login untuk Memulai Ujian
+        </a>
+      {% elif user_session and user_session.status == 'completed' %}
+        <a href="{{ url_for('exam.result', session_id=user_session.id) }}" class="btn btn-success btn-lg" style="padding: 1rem 3rem;">
+          <i class="fas fa-poll"></i> Lihat Lembar Hasil & Skor IRT
+        </a>
+      {% elif user_session and user_session.status == 'in_progress' %}
+        <a href="{{ url_for('exam.cbt_room', session_id=user_session.id) }}" class="btn btn-warning btn-lg" style="padding: 1rem 3rem;">
+          <i class="fas fa-play"></i> Lanjutkan Sesi Ujian CBT
+        </a>
+      {% else %}
+        <form method="POST" action="{{ url_for('exam.start_exam', package_id=package.id) }}">
+          <button type="submit" class="btn btn-primary btn-lg" style="padding: 1rem 3.5rem; font-size: 1.15rem;">
+            <i class="fas fa-rocket"></i> Mulai Pengerjaan Tryout Sekarang
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

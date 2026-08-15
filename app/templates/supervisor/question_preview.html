@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Preview Soal #{{ question.id }} - BMP CBT{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto 2rem auto;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+        <i class="fas fa-eye" style="color: var(--primary-600);"></i> Preview Butir Soal #{{ question.id }}
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.875rem;">Simulasi tampilan butir soal seperti yang dilihat peserta saat ujian CBT.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('supervisor.question_edit', question_id=question.id) }}" class="btn btn-primary btn-sm">
+        <i class="fas fa-edit"></i> Edit Soal Ini
+      </a>
+      <a href="{{ url_for('supervisor.questions') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Kembali
+      </a>
+    </div>
+  </div>
+
+  <!-- Metadata Header -->
+  <div class="card" style="margin-bottom: 1.5rem; background: var(--light-50); border: 1px solid var(--light-200); padding: 1rem 1.25rem;">
+    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 0.875rem;">
+      <div>
+        <span style="color: var(--text-muted);">Kelompok (T1):</span>
+        <b>{{ question.subtest.test_group.name if question.subtest and question.subtest.test_group else '-' }}</b>
+      </div>
+      <div>
+        <span style="color: var(--text-muted);">Subtes (T2):</span>
+        <b>{{ question.subtest.name if question.subtest else '-' }}</b>
+      </div>
+      <div>
+        <span style="color: var(--text-muted);">Topik (T3):</span>
+        <b>{{ question.topic.name if question.topic else '-' }}</b>
+      </div>
+      <div>
+        <span style="color: var(--text-muted);">Bentuk:</span>
+        <span class="badge badge-primary">{{ question.question_type }}</span>
+      </div>
+      <div>
+        <span style="color: var(--text-muted);">Kesulitan:</span>
+        <span class="badge badge-{% if question.difficulty_level == 'mudah' %}success{% elif question.difficulty_level == 'sedang' %}warning{% else %}danger{% endif %}">
+          {{ question.difficulty_level }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simulated CBT Question View -->
+  <div class="card" style="padding: 2rem; border-left: 4px solid var(--primary-600); margin-bottom: 2rem;">
+    <div style="font-size: 1.1rem; line-height: 1.7; color: var(--text-main); margin-bottom: 1.5rem; white-space: pre-line;">
+      {{ question.question_text }}
+    </div>
+
+    {% if question.question_image %}
+    <div class="question-image-box" style="max-width: 500px;">
+      <img src="/static/uploads/questions/{{ question.question_image }}" alt="Lampiran Soal">
+    </div>
+    {% endif %}
+
+    <!-- Options Preview -->
+    <div style="margin-top: 1.5rem;">
+      {% if question.question_type == 'pg' %}
+        {% for opt in question.options %}
+        <div class="option-item" style="cursor: default;">
+          <div class="option-key-badge">{{ opt.key }}</div>
+          <div style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main);">
+            {{ opt.text }}
+          </div>
+        </div>
+        {% endfor %}
+      {% elif question.question_type == 'pg_kompleks' %}
+        {% for opt in question.options %}
+        <div class="option-item" style="cursor: default;">
+          <div class="option-key-badge" style="border-radius: 4px;">{{ opt.key }}</div>
+          <div style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main);">
+            {{ opt.text }}
+          </div>
+        </div>
+        {% endfor %}
+      {% elif question.question_type == 'isian' %}
+        <div class="form-group" style="max-width: 320px;">
+          <label class="form-label" style="color: var(--text-muted);">Jawaban Peserta (Kotak Isian):</label>
+          <input type="text" class="form-control" placeholder="Ketik angka atau kata sederhana..." disabled>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Solution & Explanation Card -->
+  <div class="card" style="background: var(--primary-50); border: 1px solid var(--primary-200); padding: 1.75rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--primary-800); margin-bottom: 0.75rem;">
+      <i class="fas fa-check-circle" style="color: var(--success-600);"></i> Kunci Jawaban & Pembahasan Resmi
+    </h3>
+    
+    <div style="margin-bottom: 1rem;">
+      <span style="font-size: 0.875rem; color: var(--text-muted);">Kunci Benar:</span>
+      <span style="font-weight: 800; font-size: 1.1rem; color: var(--primary-900); background: white; padding: 0.25rem 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--primary-200); margin-left: 0.5rem;">
+        {{ question.correct_answer }}
+      </span>
+    </div>
+
+    {% if question.explanation_text %}
+    <div style="font-size: 0.95rem; line-height: 1.7; color: var(--dark-800); margin-bottom: 1rem; white-space: pre-line;">
+      {{ question.explanation_text }}
+    </div>
+    {% endif %}
+
+    {% if question.explanation_image %}
+    <div style="max-width: 500px; margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--primary-200);">
+      <img src="/static/uploads/explanations/{{ question.explanation_image }}" alt="Lampiran Pembahasan" style="width: 100%; display: block;">
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
