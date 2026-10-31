@@ -2,47 +2,48 @@
   BMPTryout - AUTO RUN SETUP (Windows Task Scheduler)
 ================================================================
 
-[ SETUP AUTO-RUN ON BOOT ]
+[ METODE 1: PALING MUDAH (1-KLIK) ]
 
-  Jalankan PowerShell sebagai Administrator, lalu:
+  Cukup copy file BMPTryout.exe dan install_autorun.bat ke folder tujuan:
+    C:\PROJECT\Production\eLearning\
 
-    schtasks /create /tn "BMPTryout" /tr "d:\Project\eLearning\dist\BMPTryout.exe" /sc onstart /ru SYSTEM /rl highest /f
+  Lalu klik 2x file:
+    C:\PROJECT\Production\eLearning\install_autorun.bat
 
-  * Sesuaikan path d:\Project\eLearning\dist\BMPTryout.exe sesuai lokasi .exe di komputer/server Anda
-
-
-[ TEST JALANIN SEKARANG ]
-
-    schtasks /run /tn "BMPTryout"
+  Script ini otomatis mendeteksi lokasi folder tersebut, meminta akses Administrator (UAC), 
+  dan mendaftarkan Task Scheduler dengan Working Directory yang tepat ke C:\PROJECT\Production\eLearning.
 
 
-[ CEK STATUS ]
+[ METODE 2: MANUAL VIA POWERSHELL ADMINISTRATOR ]
 
-    schtasks /query /tn "BMPTryout"
+  Buka PowerShell (Run as Administrator), lalu copy-paste perintah berikut:
 
-  Akses website CBT:   http://localhost:5000
+  $action = New-ScheduledTaskAction -Execute "C:\PROJECT\Production\eLearning\BMPTryout.exe" -WorkingDirectory "C:\PROJECT\Production\eLearning"
+  $triggerBoot = New-ScheduledTaskTrigger -AtStartup
+  $triggerBoot.Delay = 'PT10S'
+  $triggerLogon = New-ScheduledTaskTrigger -AtLogOn
+  $principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+  $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Days 0)
+  Register-ScheduledTask -TaskName "BMPTryout" -Action $action -Trigger @($triggerBoot, $triggerLogon) -Principal $principal -Settings $settings -Description "BMP CBT Tryout Standalone WSGI Server" -Force
 
 
-[ DISABLE / STOP ]
+[ CEK STATUS / TESTING ]
 
-    schtasks /end /tn "BMPTryout"
+  1. Jalankan manual sekarang:
+     Start-ScheduledTask -TaskName "BMPTryout"
+
+  2. Cek status apakah sedang Running:
+     Get-ScheduledTask -TaskName "BMPTryout"
+
+  3. Akses Web di Browser:
+     http://localhost:5000
 
 
-[ HAPUS PERMANEN ]
+[ UNINSTALL / STOP AUTO-RUN ]
 
-    schtasks /delete /tn "BMPTryout" /f
+  Cukup klik 2x file:
+    d:\Project\eLearning\uninstall_autorun.bat
 
-================================================================
-  ALTERNATIF: Manual Start / Stop via PowerShell
-================================================================
-
-  Start:   Start-Process "d:\Project\eLearning\dist\BMPTryout.exe"
-  Stop:    Get-Process BMPTryout | Stop-Process -Force
-
-================================================================
-  AKUN LOGIN DEFAULT (Bawaan Sistem):
-================================================================
-  Administrator : admin / admin123
-  Supervisor    : supervisor / spv123
-  Peserta Demo  : peserta1 / peserta123
+  Atau via PowerShell Administrator:
+    Unregister-ScheduledTask -TaskName "BMPTryout" -Confirm:$false
 ================================================================

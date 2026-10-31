@@ -1,5 +1,10 @@
 import os
 import sys
+
+# Ensure working directory is always the folder of the .exe when running as Windows Service / Task Scheduler
+if getattr(sys, 'frozen', False):
+    os.chdir(os.path.dirname(sys.executable))
+
 import webbrowser
 from app import create_app, db
 from app.models import User
