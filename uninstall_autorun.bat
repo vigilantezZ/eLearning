@@ -1,0 +1,5 @@
+@echo off
+title BMPTryout Auto-Run Uninstaller
+cd /d "%~dp0"
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command Stop-ScheduledTask -TaskName BMPTryout -ErrorAction SilentlyContinue; Stop-Process -Name BMPTryout -Force -ErrorAction SilentlyContinue; Unregister-ScheduledTask -TaskName BMPTryout -Confirm:$false -ErrorAction SilentlyContinue; Write-Host ''[OK] Task BMPTryout telah dihapus permanen.'' -ForegroundColor Green; Read-Host ''Tekan Enter...''' } else { Stop-ScheduledTask -TaskName 'BMPTryout' -ErrorAction SilentlyContinue; Stop-Process -Name 'BMPTryout' -Force -ErrorAction SilentlyContinue; Unregister-ScheduledTask -TaskName 'BMPTryout' -Confirm:$false -ErrorAction SilentlyContinue; Write-Host '[OK] Task BMPTryout telah dihapus permanen.' -ForegroundColor Green; Read-Host 'Tekan Enter...'; } }"
