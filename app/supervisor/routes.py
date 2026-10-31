@@ -174,6 +174,47 @@ def add_subtest():
     return redirect(url_for('supervisor.structure_manager'))
 
 
+def get_or_create_topic(subtest_id, name, description=None):
+    """Topik dengan nama sama (tanpa membedakan huruf besar/kecil) di subtes yang sama dipakai ulang.
+    Mengembalikan (topic, created)."""
+    name = ' '.join(name.split())[:128]
+    existing = Topic.query.filter(
+        Topic.subtest_id == subtest_id,
+        db.func.lower(Topic.name) == name.lower()
+    ).first()
+    if existing:
+        return existing, False
+    topic = Topic(subtest_id=subtest_id, name=name, description=description or None)
+    db.session.add(topic)
+    db.session.flush()
+    return topic, True
+
+
+NEW_TOPIC_VALUE = '__new__'
+
+
+def resolve_question_topic(subtest_id):
+    """Topik dari form soal: topik yang ada (harus milik subtes terpilih) atau topik baru yang diketik.
+    Mengembalikan (topic_id, flash_messages)."""
+    raw = request.form.get('topic_id', '').strip()
+    if not subtest_id or not raw:
+        return None, []
+
+    if raw == NEW_TOPIC_VALUE:
+        name = request.form.get('new_topic_name', '').strip()
+        if not name:
+            return None, [('Nama topik baru kosong, soal disimpan tanpa topik.', 'warning')]
+        topic, created = get_or_create_topic(subtest_id, name)
+        if created:
+            return topic.id, [(f"Topik baru '{topic.name}' ditambahkan ke subtes {topic.subtest.name}.", 'info')]
+        return topic.id, []
+
+    topic = Topic.query.get(int(raw)) if raw.isdigit() else None
+    if not topic or topic.subtest_id != subtest_id:
+        return None, [('Topik yang dipilih bukan bagian dari subtes ini, soal disimpan tanpa topik.', 'warning')]
+    return topic.id, []
+
+
 @supervisor_bp.route('/structure/topic/add', methods=['POST'])
 @login_required
 @supervisor_or_admin_required
@@ -186,10 +227,13 @@ def add_topic():
         flash('Subtes dan Nama Topik (Tier 3) wajib diisi.', 'danger')
         return redirect(url_for('supervisor.structure_manager'))
 
-    topic = Topic(subtest_id=subtest_id, name=name, description=description)
-    db.session.add(topic)
+    topic, created = get_or_create_topic(subtest_id, name, description)
+    if not created:
+        flash(f"Topik '{topic.name}' sudah ada di subtes {topic.subtest.name}.", 'warning')
+        return redirect(url_for('supervisor.structure_manager'))
+
     db.session.commit()
-    flash(f"Topik '{name}' (Tier 3 Opsional) berhasil ditambahkan.", 'success')
+    flash(f"Topik '{topic.name}' (Tier 3 Opsional) berhasil ditambahkan.", 'success')
     return redirect(url_for('supervisor.structure_manager'))
 
 
@@ -268,7 +312,6 @@ def questions():
 def question_new():
     if request.method == 'POST':
         subtest_id = request.form.get('subtest_id', type=int)
-        topic_id = request.form.get('topic_id', type=int) or None
         question_type = request.form.get('question_type', 'pg')
         question_text = request.form.get('question_text', '').strip()
         explanation_text = request.form.get('explanation_text', '').strip()
@@ -277,6 +320,8 @@ def question_new():
         if not subtest_id or not question_text:
             flash('Subtes (Tier 2) dan Teks Soal wajib diisi.', 'danger')
             return redirect(request.url)
+
+        topic_id, topic_messages = resolve_question_topic(subtest_id)
 
         # Process question image upload with automatic optimization
         question_image = None
@@ -338,10 +383,12 @@ def question_new():
         db.session.add(q)
         db.session.commit()
         flash('Butir soal berhasil ditambahkan ke Bank Soal!', 'success')
+        for message, category in topic_messages:
+            flash(message, category)
         return redirect(url_for('supervisor.questions'))
 
     subtests = Subtest.query.order_by(Subtest.order_num).all()
-    topics = Topic.query.all()
+    topics = Topic.query.order_by(Topic.name).all()
     return render_template('supervisor/question_form.html', subtests=subtests, topics=topics, question=None)
 
 
@@ -353,7 +400,7 @@ def question_edit(question_id):
 
     if request.method == 'POST':
         q.subtest_id = request.form.get('subtest_id', type=int)
-        q.topic_id = request.form.get('topic_id', type=int) or None
+        q.topic_id, topic_messages = resolve_question_topic(q.subtest_id)
         q.question_type = request.form.get('question_type', 'pg')
         q.question_text = request.form.get('question_text', '').strip()
         q.explanation_text = request.form.get('explanation_text', '').strip()
@@ -401,10 +448,12 @@ def question_edit(question_id):
 
         db.session.commit()
         flash('Perubahan soal berhasil disimpan!', 'success')
+        for message, category in topic_messages:
+            flash(message, category)
         return redirect(url_for('supervisor.questions'))
 
     subtests = Subtest.query.order_by(Subtest.order_num).all()
-    topics = Topic.query.all()
+    topics = Topic.query.order_by(Topic.name).all()
     return render_template('supervisor/question_form.html', subtests=subtests, topics=topics, question=q)
 
 
@@ -449,14 +498,15 @@ def analytics():
         sessions = ExamSession.query.filter_by(
             tryout_package_id=selected_package.id,
             status='completed'
-        ).order_by(ExamSession.national_rank.asc()).all()
+        ).order_by(ExamSession.national_rank.is_(None), ExamSession.national_rank.asc()).all()
 
-        # Calculate average score per subtest
+        # Calculate average score per subtest (akun peserta saja, sesi uji coba admin/supervisor tidak dihitung)
         for ts in selected_package.package_subtests:
-            scores = SubtestScore.query.join(ExamSession).filter(
+            scores = SubtestScore.query.join(ExamSession).join(User, ExamSession.user_id == User.id).filter(
                 ExamSession.tryout_package_id == selected_package.id,
                 ExamSession.status == 'completed',
-                SubtestScore.subtest_id == ts.subtest_id
+                SubtestScore.subtest_id == ts.subtest_id,
+                User.role == 'peserta'
             ).all()
             
             if scores:

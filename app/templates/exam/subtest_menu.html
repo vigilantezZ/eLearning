@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Pilih Subtes - {{ package.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 1rem auto 3rem auto;">
+
+  <div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('exam.catalog') }}" class="btn btn-secondary btn-sm">
+      <i class="fas fa-arrow-left"></i> Kembali ke Katalog
+    </a>
+  </div>
+
+  <!-- Package Header -->
+  <div class="card" style="padding: 2rem; border-top: 5px solid var(--primary-600); margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+      <span class="badge badge-primary">MENU PILIH SUBTES</span>
+      {% if package.free_subtest_order %}
+        <span class="badge badge-success"><i class="fas fa-random"></i> Urutan Bebas</span>
+      {% else %}
+        <span class="badge badge-warning"><i class="fas fa-list-ol"></i> Berurutan (Simulasi UTBK)</span>
+      {% endif %}
+    </div>
+    <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.35rem;">
+      {{ package.title }}
+    </h1>
+    <div style="font-size: 0.9rem; color: var(--text-muted);">
+      Peserta: <b>{{ session.user.full_name }}</b> &bull; {{ session.user.school or 'Peserta CBT' }}
+    </div>
+  </div>
+
+  <!-- Active Subtest Banner -->
+  {% if active_state %}
+  <div class="alert alert-warning" style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+    <div>
+      <i class="fas fa-stopwatch" style="font-size: 1.25rem;"></i>
+      Subtes <b>{{ active_state.subtest.name }}</b> sedang berjalan. Sisa waktu:
+      <b class="js-countdown" data-remaining="{{ active_state.remaining_seconds }}">--:--</b>.
+      Timer tetap berjalan walaupun Anda berada di menu ini.
+    </div>
+    <a href="{{ url_for('exam.cbt_room', session_id=session.id) }}" class="btn btn-warning">
+      <i class="fas fa-play"></i> Lanjutkan Subtes
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Subtest List -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-800); margin-bottom: 1rem;">
+      <i class="fas fa-layer-group"></i> Daftar Subtes
+    </h3>
+
+    <div style="overflow-x: auto;">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 60px;">Urutan</th>
+            <th>Subtes (T2)</th>
+            <th>Durasi</th>
+            <th>Status</th>
+            <th style="text-align: right;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for st in states %}
+          <tr>
+            <td><b>#{{ st.position }}</b></td>
+            <td>
+              <span class="badge badge-primary" style="font-size: 0.7rem;">{{ st.subtest.test_group.name if st.subtest.test_group else '-' }}</span>
+              <div style="font-weight: 700; color: var(--dark-900); margin-top: 0.2rem;">{{ st.subtest.name }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ st.total }} Soal</div>
+            </td>
+            <td>
+              <span class="badge badge-neutral"><i class="fas fa-clock"></i> {{ st.tryout_subtest.duration_minutes }} Menit</span>
+            </td>
+            <td>
+              {% if st.status == 'finished' %}
+                <span class="badge badge-success"><i class="fas fa-check-circle"></i> Selesai</span>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">{{ st.answered }} / {{ st.total }} terisi</div>
+              {% elif st.status == 'in_progress' %}
+                <span class="badge badge-warning"><i class="fas fa-spinner fa-spin"></i> Sedang Berjalan</span>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">{{ st.answered }} / {{ st.total }} terisi</div>
+              {% else %}
+                <span class="badge badge-neutral">Belum Dikerjakan</span>
+              {% endif %}
+            </td>
+            <td style="text-align: right;">
+              {% if st.status == 'in_progress' %}
+                <a href="{{ url_for('exam.cbt_room', session_id=session.id) }}" class="btn btn-warning btn-sm">
+                  <i class="fas fa-play"></i> Lanjutkan
+                </a>
+              {% elif st.status == 'finished' %}
+                <span style="font-size: 0.85rem; color: var(--text-muted);"><i class="fas fa-lock"></i> Terkunci</span>
+              {% elif st.can_start %}
+                {% set start_msg = 'Mulai subtes ' ~ st.subtest.name ~ '? Timer ' ~ st.tryout_subtest.duration_minutes ~ ' menit langsung berjalan dan tidak bisa dijeda. Subtes yang sudah selesai tidak bisa dibuka lagi.' %}
+                <form method="POST" action="{{ url_for('exam.start_subtest', session_id=session.id, subtest_id=st.subtest.id) }}" onsubmit='return confirm({{ start_msg|tojson }})'>
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-play-circle"></i> Mulai
+                  </button>
+                </form>
+              {% else %}
+                <span style="font-size: 0.8rem; color: var(--text-muted);"><i class="fas fa-lock"></i> {{ st.lock_reason }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Rules -->
+  <div style="background: var(--warning-50); border: 1px solid var(--warning-100); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+    <h4 style="font-weight: 700; color: var(--warning-700); font-size: 0.95rem; margin-bottom: 0.5rem;">
+      <i class="fas fa-exclamation-triangle"></i> Ketentuan Pengerjaan:
+    </h4>
+    <ul style="margin-left: 1.5rem; font-size: 0.875rem; color: var(--dark-800); line-height: 1.6;">
+      {% if package.free_subtest_order %}
+      <li>Anda bebas memilih subtes mana yang dikerjakan lebih dulu, tetapi hanya <b>satu subtes</b> yang dapat berjalan dalam satu waktu.</li>
+      {% else %}
+      <li>Subtes dikerjakan <b>berurutan</b> sesuai nomor urut paket.</li>
+      {% endif %}
+      <li>Timer subtes tetap berjalan walaupun Anda kembali ke menu ini. Saat waktu habis, jawaban tersimpan dan subtes otomatis dikunci.</li>
+      <li>Subtes yang sudah selesai <b>tidak dapat dibuka kembali</b>.</li>
+      <li>Subtes yang tidak dikerjakan <b>tidak mendapat nilai</b>, dan peserta yang tidak mengerjakan seluruh subtes <b>tidak masuk peringkat</b>.</li>
+    </ul>
+  </div>
+
+  <!-- Finish Tryout -->
+  {% set finish_msg = 'Selesaikan tryout sekarang? Setelah ini Anda tidak dapat mengerjakan subtes apa pun lagi.' %}
+  {% if active_state %}
+    {% set finish_msg = finish_msg ~ ' Subtes ' ~ active_state.subtest.name ~ ' yang sedang berjalan akan ikut dikunci.' %}
+  {% endif %}
+  {% if not_started_count %}
+    {% set finish_msg = finish_msg ~ ' Masih ada ' ~ not_started_count ~ ' subtes yang belum dikerjakan: subtes tersebut tidak mendapat nilai dan Anda tidak masuk peringkat.' %}
+  {% endif %}
+  <div class="card" style="text-align: center; padding: 2rem;">
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+      {% if not_started_count %}
+        Masih ada <b>{{ not_started_count }} subtes</b> yang belum dikerjakan.
+      {% else %}
+        Semua subtes sudah dibuka.
+      {% endif %}
+      Tekan tombol di bawah bila Anda sudah selesai mengerjakan tryout.
+    </p>
+    <form method="POST" action="{{ url_for('exam.submit_exam', session_id=session.id) }}" onsubmit='return confirm({{ finish_msg|tojson }})'>
+      <button type="submit" class="btn btn-success btn-lg" style="padding: 1rem 3rem;">
+        <i class="fas fa-check-double"></i> Selesai Tryout & Kumpulkan
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.js-countdown').forEach((el) => {
+    let remaining = parseInt(el.dataset.remaining, 10);
+    const render = () => {
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      el.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    };
+    render();
+    const timer = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(timer);
+        window.location.reload();
+        return;
+      }
+      render();
+    }, 1000);
+  });
+</script>
+{% endblock %}

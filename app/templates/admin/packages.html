@@ -39,7 +39,10 @@
             <span class="badge badge-neutral"><i class="fas fa-pencil-alt"></i> Draf</span>
           {% endif %}
 
-          {% if pkg.is_irt_calculated %}
+          {% set pending_irt = pkg.pending_irt_count %}
+          {% if pkg.is_irt_calculated and pending_irt %}
+            <span class="badge badge-warning"><i class="fas fa-redo"></i> IRT Perlu Dihitung Ulang ({{ pending_irt }} peserta baru)</span>
+          {% elif pkg.is_irt_calculated %}
             <span class="badge badge-primary"><i class="fas fa-chart-line"></i> IRT Terkalibrasi</span>
           {% else %}
             <span class="badge badge-warning"><i class="fas fa-clock"></i> IRT Belum Dihitung</span>

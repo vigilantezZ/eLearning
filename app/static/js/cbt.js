@@ -9,15 +9,14 @@ class CBTEngine {
     this.packageId = config.packageId;
     this.remainingSeconds = config.remainingSeconds;
     this.totalQuestions = config.totalQuestions;
-    this.currentSubtestIndex = config.currentSubtestIndex;
-    this.totalSubtests = config.totalSubtests;
-    this.nextSubtestUrl = config.nextSubtestUrl;
-    this.submitExamUrl = config.submitExamUrl;
+    this.menuUrl = config.menuUrl;
     this.autosaveUrl = config.autosaveUrl || '/api/cbt/autosave';
 
     this.currentQuestionIndex = 0;
     this.timerInterval = null;
     this.debounceTimer = null;
+    this.pendingSave = null; // isian answer waiting for debounce
+    this.inFlightSaves = new Set();
 
     this.initElements();
     this.initTimer();
@@ -71,16 +70,42 @@ class CBTEngine {
     this.timerDisplay.innerText = timeStr;
   }
 
-  onTimerExpired() {
-    alert('Waktu untuk subtes ini telah habis! Sistem akan otomatis menyimpan jawaban dan berpindah ke sesi berikutnya.');
-    if (this.currentSubtestIndex + 1 >= this.totalSubtests) {
-      window.location.href = this.submitExamUrl;
-    } else {
-      window.location.href = this.nextSubtestUrl;
+  async onTimerExpired() {
+    await this.flushAutosave();
+    alert('Waktu untuk subtes ini telah habis! Jawaban Anda sudah tersimpan dan subtes ini dikunci. Anda akan kembali ke menu pilih subtes.');
+    window.location.href = this.menuUrl;
+  }
+
+  async flushAutosave() {
+    if (this.pendingSave) {
+      clearTimeout(this.debounceTimer);
+      const { qId, getValue } = this.pendingSave;
+      this.pendingSave = null;
+      this.triggerAutosave(qId, getValue());
     }
+    await Promise.allSettled([...this.inFlightSaves]);
   }
 
   initEvents() {
+    // Finish subtest: make sure pending answers reach the server before leaving
+    const finishForm = document.getElementById('finish-subtest-form');
+    if (finishForm) {
+      finishForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const unanswered = [...this.paletteButtons].filter(
+          (btn) => !btn.classList.contains('answered') && !btn.classList.contains('doubtful')
+        ).length;
+        let message = 'Selesaikan subtes ini dan kembali ke menu? Subtes yang sudah selesai tidak dapat dibuka kembali.';
+        if (unanswered > 0) {
+          message = `Masih ada ${unanswered} soal yang belum terisi. ` + message;
+        }
+        if (!confirm(message)) return;
+        await this.flushAutosave();
+        clearInterval(this.timerInterval);
+        finishForm.submit();
+      });
+    }
+
     // Navigation buttons
     if (this.prevBtn) {
       this.prevBtn.addEventListener('click', () => {
@@ -149,11 +174,17 @@ class CBTEngine {
         if (textInput) {
           textInput.addEventListener('input', () => {
             clearTimeout(this.debounceTimer);
+            this.pendingSave = { qId, getValue: () => textInput.value.trim() };
             this.debounceTimer = setTimeout(() => {
+              this.pendingSave = null;
               this.triggerAutosave(qId, textInput.value.trim());
             }, 500);
           });
           textInput.addEventListener('blur', () => {
+            if (this.pendingSave && this.pendingSave.qId === qId) {
+              clearTimeout(this.debounceTimer);
+              this.pendingSave = null;
+            }
             this.triggerAutosave(qId, textInput.value.trim());
           });
         }
@@ -240,7 +271,14 @@ class CBTEngine {
     return null;
   }
 
-  async triggerAutosave(questionId, answerValue, isDoubtful = null) {
+  triggerAutosave(questionId, answerValue, isDoubtful = null) {
+    const request = this.sendAutosave(questionId, answerValue, isDoubtful);
+    this.inFlightSaves.add(request);
+    request.finally(() => this.inFlightSaves.delete(request));
+    return request;
+  }
+
+  async sendAutosave(questionId, answerValue, isDoubtful = null) {
     const activeCard = this.questionCards[this.currentQuestionIndex];
     if (isDoubtful === null && activeCard) {
       isDoubtful = activeCard.dataset.isDoubtful === 'true';
@@ -286,6 +324,9 @@ class CBTEngine {
             paletteBtn.classList.remove('answered', 'doubtful');
           }
         }
+      } else if (this.autosaveStatus) {
+        // e.g. subtest already locked by the server
+        this.autosaveStatus.innerHTML = '<span class="text-danger"><i class="fas fa-lock"></i> Jawaban tidak tersimpan: subtes sudah dikunci</span>';
       }
     } catch (err) {
       console.error('Autosave error:', err);

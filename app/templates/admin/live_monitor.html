@@ -41,8 +41,8 @@
       </thead>
       <tbody>
         {% for s in active_sessions %}
-        {% set sub_list = s.tryout_package.package_subtests %}
-        {% set active_sub = sub_list[s.current_subtest_index].subtest if s.current_subtest_index < sub_list|length else None %}
+        {% set active_attempt = s.active_attempt %}
+        {% set finished_count = s.subtest_attempts | selectattr('status', 'equalto', 'finished') | list | length %}
         <tr>
           <td>
             <div style="display: flex; align-items: center; gap: 0.6rem;">
@@ -55,9 +55,14 @@
           </td>
           <td><b>{{ s.tryout_package.title }}</b></td>
           <td>
-            <span class="badge badge-primary">
-              Subtes ke-{{ s.current_subtest_index + 1 }}: {{ active_sub.name if active_sub else 'Transisi' }}
-            </span>
+            {% if active_attempt %}
+              <span class="badge badge-primary">{{ active_attempt.subtest.name }}</span>
+            {% else %}
+              <span class="badge badge-neutral">Di Menu Pilih Subtes</span>
+            {% endif %}
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+              {{ finished_count }} / {{ s.tryout_package.package_subtests|length }} subtes selesai
+            </div>
           </td>
           <td>
             <div style="font-weight: 700; color: var(--success-700);">

@@ -79,7 +79,7 @@
           </div>
           <div>
             <span style="color: var(--text-muted);">Skor IRT:</span>
-            <b style="color: var(--primary-700); font-size: 1rem;">{{ s.total_irt_score | format_score }}</b>
+            <b style="color: var(--primary-700); font-size: 1rem;">{{ s.total_irt_score | format_score if s.irt_scored_at else 'Menunggu IRT' }}</b>
           </div>
           {% if s.national_rank %}
           <div>

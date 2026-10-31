@@ -88,6 +88,11 @@ def create_app(config_override=None):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(exam_bp, url_prefix='/')
 
+    # Create missing tables/columns on existing databases
+    from app.schema_upgrade import upgrade_schema
+    with app.app_context():
+        upgrade_schema()
+
     # Register custom template filters (GMT+7 / WIB PC Time)
     @app.template_filter('datetime_format')
     def datetime_format(value, format='%d %b %Y %H:%M'):
@@ -114,5 +119,14 @@ def create_app(config_override=None):
     def load_user(user_id):
         from app.models import User
         return User.query.get(int(user_id))
+
+    # Badge jumlah permintaan Lupa Password di navigasi admin
+    @app.context_processor
+    def inject_pending_password_resets():
+        from flask_login import current_user
+        from app.models import PasswordResetRequest
+        if current_user.is_authenticated and current_user.is_admin:
+            return {'pending_password_resets': PasswordResetRequest.query.filter_by(status='pending').count()}
+        return {'pending_password_resets': 0}
 
     return app

@@ -106,7 +106,7 @@
             <i class="fas fa-poll"></i> Lihat Skor IRT
           </a>
         {% elif session and session.status == 'in_progress' %}
-          <a href="{{ url_for('exam.cbt_room', session_id=session.id) }}" class="btn btn-warning" style="flex: 1;">
+          <a href="{{ url_for('exam.subtest_menu', session_id=session.id) }}" class="btn btn-warning" style="flex: 1;">
             <i class="fas fa-play"></i> Lanjutkan Ujian
           </a>
         {% else %}

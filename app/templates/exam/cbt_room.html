@@ -24,7 +24,7 @@
       <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Beasiswa Muda Purbalingga" style="width: 38px; height: 38px; object-fit: contain;">
       <div>
         <div style="font-size: 0.775rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
-          {{ active_subtest.test_group.name if active_subtest.test_group else 'BMP CBT EXAM' }} (Subtes {{ current_subtest_index + 1 }} dari {{ total_subtests }})
+          {{ active_subtest.test_group.name if active_subtest.test_group else 'BMP CBT EXAM' }} (Subtes ke-{{ subtest_position }} dari {{ total_subtests }})
         </div>
         <div style="font-weight: 800; font-size: 1.15rem; color: white;">
           {{ active_subtest.name }}
@@ -185,7 +185,7 @@
           <!-- Active Subtest Info -->
           <div style="margin-bottom: 1rem;">
             <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
-              Subtes {{ current_subtest_index + 1 }} dari {{ total_subtests }}
+              Subtes ke-{{ subtest_position }} dari {{ total_subtests }}
             </div>
             <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary-700);">
               {{ active_subtest.name }}
@@ -228,21 +228,16 @@
             </div>
           </div>
 
-          <!-- Next Subtest / Submit Button Action -->
+          <!-- Finish Subtest Action (back to subtest menu) -->
           <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--light-200);">
-            {% if current_subtest_index + 1 < total_subtests %}
-              <form method="POST" action="{{ url_for('exam.next_subtest', session_id=session.id) }}">
-                <button type="submit" class="btn btn-warning" style="width: 100%; padding: 0.75rem; font-size: 0.9rem;">
-                  <i class="fas fa-step-forward"></i> Selesaikan Subtes & Lanjut
-                </button>
-              </form>
-            {% else %}
-              <form method="POST" action="{{ url_for('exam.submit_exam', session_id=session.id) }}">
-                <button type="submit" class="btn btn-success" style="width: 100%; padding: 0.85rem; font-size: 0.95rem;">
-                  <i class="fas fa-check-double"></i> Kumpulkan Lembar Ujian
-                </button>
-              </form>
-            {% endif %}
+            <form id="finish-subtest-form" method="POST" action="{{ url_for('exam.finish_subtest', session_id=session.id) }}">
+              <button type="submit" class="btn btn-warning" style="width: 100%; padding: 0.75rem; font-size: 0.9rem;">
+                <i class="fas fa-flag-checkered"></i> Selesai Subtes & Kembali ke Menu
+              </button>
+            </form>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; text-align: center;">
+              Subtes yang sudah selesai tidak dapat dibuka kembali.
+            </div>
           </div>
 
         </div>
@@ -260,10 +255,7 @@
         packageId: {{ package.id }},
         remainingSeconds: {{ remaining_seconds }},
         totalQuestions: {{ questions_in_subtest|length }},
-        currentSubtestIndex: {{ current_subtest_index }},
-        totalSubtests: {{ total_subtests }},
-        nextSubtestUrl: "{{ url_for('exam.next_subtest', session_id=session.id) }}",
-        submitExamUrl: "{{ url_for('exam.submit_exam', session_id=session.id) }}",
+        menuUrl: "{{ url_for('exam.subtest_menu', session_id=session.id) }}",
         autosaveUrl: "{{ url_for('exam.api_autosave') }}"
       });
     });

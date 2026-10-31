@@ -23,7 +23,7 @@
     </h1>
 
     <p style="font-size: 1rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;">
-      {{ package.description or 'Simulasi ujian tryout ini menggunakan format pengerjaan berurutan sesuai alokasi waktu tiap subtes. Jawaban tersimpan secara otomatis.' }}
+      {{ package.description or 'Simulasi ujian tryout dengan timer mandiri per subtes. Jawaban tersimpan secara otomatis.' }}
     </p>
 
     <!-- Quick Stats Cards -->
@@ -83,8 +83,14 @@
         <i class="fas fa-exclamation-triangle"></i> Ketentuan Penting Simulasi CBT:
       </h4>
       <ul style="margin-left: 1.5rem; font-size: 0.875rem; color: var(--dark-800); line-height: 1.6;">
-        <li>Setiap subtes memiliki <b>countdown timer mandiri</b>. Ketika waktu subtes habis, sistem akan otomatis menyimpan jawaban dan mengunci subtes tersebut lalu melanjutkan ke subtes berikutnya.</li>
-        <li>Subtes yang telah selesai dikerjakan <b>tidak dapat dibuka kembali</b> (sesuai mekanisme resmi SNBT).</li>
+        {% if package.free_subtest_order %}
+        <li>Subtes dipilih dari <b>menu pilih subtes</b> dengan <b>urutan bebas</b>. Hanya satu subtes yang dapat berjalan dalam satu waktu.</li>
+        {% else %}
+        <li>Subtes dikerjakan <b>berurutan</b> sesuai nomor urut di atas (seperti UTBK resmi), dimulai dari menu pilih subtes.</li>
+        {% endif %}
+        <li>Setiap subtes memiliki <b>countdown timer mandiri</b> yang tidak bisa dijeda. Ketika waktu subtes habis, jawaban otomatis tersimpan, subtes dikunci, dan Anda kembali ke menu pilih subtes.</li>
+        <li>Subtes yang telah selesai dikerjakan <b>tidak dapat dibuka kembali</b>.</li>
+        <li>Tombol <b>Selesai Tryout</b> ada di menu pilih subtes. Subtes yang tidak dikerjakan tidak mendapat nilai, dan peserta yang tidak mengerjakan seluruh subtes tidak masuk peringkat.</li>
         <li>Jawaban Anda tersimpan secara instan (*auto-save*) pada setiap kali memilih opsi atau mengetik isian.</li>
         <li>Pastikan koneksi internet stabil selama pengerjaan ujian.</li>
       </ul>
@@ -101,9 +107,13 @@
           <i class="fas fa-poll"></i> Lihat Lembar Hasil & Skor IRT
         </a>
       {% elif user_session and user_session.status == 'in_progress' %}
-        <a href="{{ url_for('exam.cbt_room', session_id=user_session.id) }}" class="btn btn-warning btn-lg" style="padding: 1rem 3rem;">
+        <a href="{{ url_for('exam.subtest_menu', session_id=user_session.id) }}" class="btn btn-warning btn-lg" style="padding: 1rem 3rem;">
           <i class="fas fa-play"></i> Lanjutkan Sesi Ujian CBT
         </a>
+      {% elif not package.is_active_now() %}
+        <button type="button" class="btn btn-secondary btn-lg" style="padding: 1rem 3rem;" disabled>
+          <i class="fas fa-lock"></i> Paket Belum Dibuka / Sudah Ditutup
+        </button>
       {% else %}
         <form method="POST" action="{{ url_for('exam.start_exam', package_id=package.id) }}">
           <button type="submit" class="btn btn-primary btn-lg" style="padding: 1rem 3.5rem; font-size: 1.15rem;">

@@ -21,9 +21,22 @@
       <a href="{{ url_for('admin.irt_calculator') }}" class="btn btn-warning">
         <i class="fas fa-calculator"></i> Kalkulasi IRT
       </a>
+      <a href="{{ url_for('admin.password_resets') }}" class="btn btn-secondary">
+        <i class="fas fa-key"></i> Reset Password
+      </a>
     </div>
   </div>
 </div>
+
+{% if pending_password_resets %}
+<div class="alert alert-warning" style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+  <div>
+    <i class="fas fa-key" style="font-size: 1.25rem;"></i>
+    Ada <b>{{ pending_password_resets }} permintaan Lupa Password</b> yang menunggu diproses.
+  </div>
+  <a href="{{ url_for('admin.password_resets') }}" class="btn btn-warning btn-sm">Proses Sekarang</a>
+</div>
+{% endif %}
 
 <!-- Stats Counter Grid -->
 <div class="grid-4" style="margin-bottom: 2rem;">

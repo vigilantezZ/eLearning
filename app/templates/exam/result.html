@@ -37,9 +37,9 @@
 
     <div style="display: flex; justify-content: center; align-items: center; gap: 3rem; flex-wrap: wrap;">
       <div>
-        <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Skor Terstandarisasi IRT</div>
+        <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Skor IRT (Rata-rata Subtes)</div>
         <div class="score-display-number">
-          {% if session.tryout_package.is_irt_calculated %}
+          {% if session.irt_scored_at %}
             {{ session.total_irt_score | format_score }}
           {% else %}
             <span style="font-size: 2.2rem;">Menunggu IRT</span>
@@ -48,20 +48,43 @@
         <div style="font-size: 0.85rem; opacity: 0.8;">Skala Standar Nasional 200 - 1000</div>
       </div>
 
-      {% if session.tryout_package.is_irt_calculated and session.national_rank %}
+      {% if session.irt_scored_at and session.national_rank %}
       <div style="border-left: 1px solid rgba(255,255,255,0.25); padding-left: 3rem;">
         <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Peringkat Nasional</div>
         <div style="font-size: 3.5rem; font-weight: 800; margin: 0.5rem 0; color: #fef08a;">
           #{{ session.national_rank }}
         </div>
-        <div style="font-size: 0.85rem; opacity: 0.8;">Dari {{ total_participants }} Total Peserta</div>
+        <div style="font-size: 0.85rem; opacity: 0.8;">Dari {{ ranked_participants }} Peserta Berperingkat</div>
       </div>
       {% endif %}
     </div>
   </div>
 
+  <!-- Staff trial session notice -->
+  {% if not session.user.is_peserta %}
+  <div class="alert alert-info" style="margin-bottom: 2rem;">
+    <i class="fas fa-info-circle" style="font-size: 1.25rem;"></i>
+    <div>
+      <b>Sesi uji coba akun {{ session.user.role }}:</b> Nilai tetap dihitung, tetapi akun admin/supervisor
+      <b>tidak masuk peringkat</b> dan jawabannya tidak dipakai untuk kalibrasi tingkat kesulitan soal.
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Incomplete attempt notice -->
+  {% if attempted_count < subtest_rows|length %}
+  <div class="alert alert-info" style="margin-bottom: 2rem;">
+    <i class="fas fa-info-circle" style="font-size: 1.25rem;"></i>
+    <div>
+      <b>Tryout tidak lengkap:</b> Anda mengerjakan {{ attempted_count }} dari {{ subtest_rows|length }} subtes.
+      Subtes yang tidak dikerjakan tidak mendapat nilai, skor di atas adalah rata-rata subtes yang dikerjakan saja,
+      dan Anda <b>tidak masuk peringkat</b> paket ini.
+    </div>
+  </div>
+  {% endif %}
+
   <!-- IRT Status Info Alert if pending -->
-  {% if not session.tryout_package.is_irt_calculated %}
+  {% if not session.irt_scored_at %}
   <div class="alert alert-warning" style="margin-bottom: 2rem;">
     <i class="fas fa-info-circle" style="font-size: 1.25rem;"></i>
     <div>
@@ -77,29 +100,34 @@
     </h3>
 
     <div class="grid-2">
-      {% for sc in subtest_scores %}
-      <div style="background: var(--light-50); border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 1.25rem;">
+      {% for row in subtest_rows %}
+      {% set sc = row.score %}
+      <div style="background: var(--light-50); border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 1.25rem;{% if not row.attempted %} opacity: 0.7;{% endif %}">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
           <div>
-            <span class="badge badge-primary" style="font-size: 0.7rem;">{{ sc.subtest.test_group.name }}</span>
-            <h4 style="font-weight: 800; font-size: 1.05rem; color: var(--dark-900); margin-top: 0.2rem;">{{ sc.subtest.name }}</h4>
+            <span class="badge badge-primary" style="font-size: 0.7rem;">{{ row.subtest.test_group.name }}</span>
+            <h4 style="font-weight: 800; font-size: 1.05rem; color: var(--dark-900); margin-top: 0.2rem;">{{ row.subtest.name }}</h4>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 1.6rem; font-weight: 800; color: var(--primary-700);">
-              {{ sc.irt_score | format_score }}
-            </div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">Skor IRT</div>
+            {% if not row.attempted %}
+              <span class="badge badge-neutral">Tidak Dikerjakan</span>
+            {% elif sc %}
+              <div style="font-size: 1.6rem; font-weight: 800; color: var(--primary-700);">
+                {{ sc.irt_score | format_score }}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Skor IRT</div>
+            {% else %}
+              <span class="badge badge-warning">Menunggu IRT</span>
+            {% endif %}
           </div>
         </div>
 
+        {% if sc %}
         <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--dark-700); padding-top: 0.6rem; border-top: 1px dashed var(--light-300);">
           <span>Jawaban Benar:</span>
           <b>{{ sc.raw_correct }} dari {{ sc.raw_total }} Soal</b>
         </div>
-      </div>
-      {% else %}
-      <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 1.5rem;">
-        Rincian nilai subtes akan muncul setelah proses kalkulasi IRT selesai dijalankan oleh Administrator.
+        {% endif %}
       </div>
       {% endfor %}
     </div>

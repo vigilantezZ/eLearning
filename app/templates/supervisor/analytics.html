@@ -38,7 +38,10 @@
     <div class="card" style="border-left: 4px solid var(--success-500);">
       <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Status Skoring IRT</div>
       <div style="font-size: 1.4rem; font-weight: 800; color: var(--success-700); margin: 0.5rem 0;">
-        {% if selected_package.is_irt_calculated %}
+        {% set pending_irt = selected_package.pending_irt_count %}
+        {% if selected_package.is_irt_calculated and pending_irt %}
+          <span style="color: var(--warning-600);"><i class="fas fa-redo"></i> Perlu Dihitung Ulang</span>
+        {% elif selected_package.is_irt_calculated %}
           <i class="fas fa-check-circle"></i> Terkalibrasi
         {% else %}
           <span style="color: var(--warning-600);"><i class="fas fa-clock"></i> Belum Dikalibrasi</span>
@@ -118,8 +121,14 @@
                 <span style="font-size: 1.1rem; color: #94a3b8;"><i class="fas fa-medal"></i> 2</span>
               {% elif s.national_rank == 3 %}
                 <span style="font-size: 1.1rem; color: #b45309;"><i class="fas fa-medal"></i> 3</span>
+              {% elif s.national_rank %}
+                <span style="font-weight: 700; color: var(--text-muted);">#{{ s.national_rank }}</span>
+              {% elif not s.user.is_peserta %}
+                <span class="badge badge-neutral" title="Akun admin/supervisor tidak masuk peringkat">Akun {{ s.user.role }}</span>
+              {% elif not s.is_full_attempt %}
+                <span class="badge badge-neutral">Tidak lengkap</span>
               {% else %}
-                <span style="font-weight: 700; color: var(--text-muted);">#{{ s.national_rank or loop.index }}</span>
+                <span style="color: var(--text-muted);">-</span>
               {% endif %}
             </td>
             <td>
@@ -139,9 +148,13 @@
               <b>{{ s.total_raw_score | int }}</b> / {{ selected_package.total_questions_count }} Soal
             </td>
             <td>
+              {% if s.irt_scored_at %}
               <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary-700);">
                 {{ s.total_irt_score | format_score }}
               </div>
+              {% else %}
+              <span style="color: var(--text-muted); font-size: 0.85rem;">Menunggu IRT</span>
+              {% endif %}
             </td>
             <td style="font-size: 0.85rem; color: var(--text-muted);">
               {{ s.submitted_at | datetime_format }}

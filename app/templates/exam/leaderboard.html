@@ -13,6 +13,14 @@
       <p style="color: var(--text-muted); font-size: 0.95rem;">
         {{ package.title }} &bull; Total <b>{{ sessions|length }}</b> Peserta Terkalibrasi
       </p>
+      <p style="color: var(--text-muted); font-size: 0.8rem;">
+        Peringkat hanya untuk peserta yang mengerjakan seluruh subtes. Akun admin/supervisor tidak masuk peringkat.
+      </p>
+      {% if pending_count %}
+      <p style="color: var(--warning-700); font-size: 0.8rem;">
+        <i class="fas fa-clock"></i> {{ pending_count }} peserta lain sudah selesai dan menunggu kalkulasi IRT. Peringkat diperbarui setelah admin menghitung ulang.
+      </p>
+      {% endif %}
     </div>
     <a href="{{ url_for('exam.catalog') }}" class="btn btn-secondary btn-sm">
       <i class="fas fa-arrow-left"></i> Kembali ke Katalog

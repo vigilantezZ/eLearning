@@ -1,8 +1,10 @@
 import math
+from datetime import datetime, timezone
 import numpy as np
 from scipy.optimize import minimize_scalar
 from app import db
 from app.models import ExamSession, ExamAnswer, Question, SubtestScore, TryoutPackage, Subtest
+from app.subtest_flow import close_idle_sessions
 
 def icc_probability(theta, a, b, c=0.0):
     """
@@ -50,22 +52,60 @@ def estimate_theta(responses, item_params):
     return float(res.x) if res.success else 0.0
 
 
+def assign_national_ranks(package_id):
+    """
+    Menyusun ulang peringkat dari skor IRT yang tersimpan, tanpa kalibrasi ulang.
+    Yang berhak: akun peserta (bukan admin/supervisor), sudah dinilai IRT, dan mengerjakan seluruh subtes.
+    Mengembalikan jumlah sesi yang mendapat peringkat; commit diserahkan ke pemanggil.
+    """
+    sessions = ExamSession.query.filter_by(
+        tryout_package_id=package_id,
+        status='completed'
+    ).order_by(ExamSession.id).all()
+
+    ranked_sessions = []
+    for session in sessions:
+        session.national_rank = None
+        if (session.user.is_peserta and session.irt_scored_at
+                and session.total_irt_score is not None and session.is_full_attempt):
+            ranked_sessions.append(session)
+
+    # Urutkan berdasarkan skor IRT tertinggi, lalu raw score
+    ranked_sessions.sort(key=lambda s: (s.total_irt_score, s.total_raw_score), reverse=True)
+    for rank, session in enumerate(ranked_sessions, start=1):
+        session.national_rank = rank
+    return len(ranked_sessions)
+
+
 def calculate_irt_for_package(package_id):
     """
     Menghitung kalibrasi parameter butir soal (a, b, c) dan kemampuan peserta (theta -> Nilai Skala 200-1000)
     untuk seluruh peserta yang telah menyelesaikan paket tryout tertentu.
+
+    Subtes yang tidak dikerjakan peserta (tidak pernah dibuka) diperlakukan sebagai data kosong:
+    tidak ikut kalibrasi butir dan tidak mendapat skor. Soal yang dikosongkan di subtes yang dibuka tetap dihitung salah.
+
+    Sesi akun admin/supervisor (uji coba) tetap dinilai, tetapi tidak ikut kalibrasi butir dan tidak masuk peringkat.
     """
     package = TryoutPackage.query.get(package_id)
     if not package:
         return False, "Paket tryout tidak ditemukan."
 
+    # Sesi yang ditinggal di menu pilih subtes ikut ditutup agar nilainya keluar
+    closed_count, running_count = close_idle_sessions(package)
+    db.session.flush()
+
+    running_note = ""
+    if running_count:
+        running_note = f" {running_count} peserta masih mengerjakan subtes dan belum diikutkan; jalankan ulang setelah mereka selesai."
+
     completed_sessions = ExamSession.query.filter_by(
         tryout_package_id=package_id,
         status='completed'
-    ).all()
+    ).order_by(ExamSession.id).all()
 
     if not completed_sessions:
-        return False, "Belum ada peserta yang menyelesaikan paket tryout ini."
+        return False, "Belum ada peserta yang menyelesaikan paket tryout ini." + running_note
 
     # Kumpulkan semua soal dalam paket ini terurut
     package_questions = [tq.question for tq in package.package_questions if tq.question is not None]
@@ -76,134 +116,141 @@ def calculate_irt_for_package(package_id):
     num_items = len(package_questions)
     num_students = len(completed_sessions)
 
+    subtest_item_indices = {}
+    for q_idx, q in enumerate(package_questions):
+        subtest_item_indices.setdefault(q.subtest_id, []).append(q_idx)
+
     # 1. Bangun Matriks Jawaban (Response Matrix) X: [num_students, num_items]
-    response_matrix = np.zeros((num_students, num_items), dtype=int)
-    
+    #    1 = benar, 0 = salah/kosong, NaN = subtes tidak dikerjakan
+    response_matrix = np.full((num_students, num_items), np.nan)
+
     for s_idx, session in enumerate(completed_sessions):
+        attempted = session.attempted_subtest_ids
+        for subtest_id, indices in subtest_item_indices.items():
+            if subtest_id in attempted:
+                response_matrix[s_idx, indices] = 0.0
+
         for answer in session.answers:
             if answer.question_id in question_id_map:
                 q_idx = question_id_map[answer.question_id]
                 # Verifikasi dan perbarui status kebenaran jawaban
                 is_correct = answer.question.is_answer_correct(answer.user_answer)
                 answer.is_correct = is_correct
-                response_matrix[s_idx, q_idx] = 1 if is_correct else 0
+                if not np.isnan(response_matrix[s_idx, q_idx]):
+                    response_matrix[s_idx, q_idx] = 1.0 if is_correct else 0.0
 
-    # Total raw scores per participant
-    raw_scores = response_matrix.sum(axis=1)
+    observed = ~np.isnan(response_matrix)
+    # Hanya jawaban akun peserta yang dipakai untuk kalibrasi butir
+    participant_rows = np.array([session.user.is_peserta for session in completed_sessions])
+    num_participants = int(participant_rows.sum())
 
     # 2. Kalibrasi Parameter Butir Soal (Item Calibration)
     item_params = {'a': [], 'b': [], 'c': []}
-    
+
     for q_idx, question in enumerate(package_questions):
-        item_responses = response_matrix[:, q_idx]
+        # c parameter (Guessing): 0.20 untuk PG (5 pilihan), 0 untuk yang lain
+        c_calc = 0.20 if question.question_type == 'pg' else 0.0
+
+        takers = observed[:, q_idx] & participant_rows
+        if not takers.any():
+            # Tidak ada peserta yang mengerjakan subtes soal ini: parameter tersimpan tidak diubah
+            item_params['a'].append(question.irt_a if question.irt_a is not None else 1.0)
+            item_params['b'].append(question.irt_b if question.irt_b is not None else 0.0)
+            item_params['c'].append(c_calc)
+            continue
+
+        item_responses = response_matrix[takers, q_idx]
         p_val = np.mean(item_responses)  # Tingkat proporsi benar
-        
+
         # Clip p_val agar logit tidak inf
         p_clipped = np.clip(p_val, 0.05, 0.95)
-        
+
         # b parameter (Difficulty): logit terbalik (soal sulit -> p rendah -> b tinggi)
         b_calc = float(-np.log(p_clipped / (1.0 - p_clipped)))
-        
-        # a parameter (Discrimination): Point-biserial correlation
-        std_raw = np.std(raw_scores)
-        if std_raw > 0 and (p_val > 0 and p_val < 1):
-            y1 = np.mean(raw_scores[item_responses == 1]) if np.sum(item_responses == 1) > 0 else 0
-            y0 = np.mean(raw_scores[item_responses == 0]) if np.sum(item_responses == 0) > 0 else 0
-            r_pbis = ((y1 - y0) / std_raw) * math.sqrt(p_val * (1.0 - p_val))
+
+        # a parameter (Discrimination): Point-biserial correlation terhadap skor subtes yang sama
+        subtest_scores = response_matrix[takers][:, subtest_item_indices[question.subtest_id]].mean(axis=1)
+        std_score = np.std(subtest_scores)
+        if std_score > 0 and (p_val > 0 and p_val < 1):
+            y1 = np.mean(subtest_scores[item_responses == 1])
+            y0 = np.mean(subtest_scores[item_responses == 0])
+            r_pbis = ((y1 - y0) / std_score) * math.sqrt(p_val * (1.0 - p_val))
             # Normalisasi a ke rentang [0.5, 2.5]
             a_calc = float(np.clip(1.0 + r_pbis * 1.5, 0.4, 2.5))
         else:
             a_calc = 1.0
-            
-        # c parameter (Guessing): 0.20 untuk PG (5 pilihan), 0 untuk yang lain
-        if question.question_type == 'pg':
-            c_calc = 0.20
-        else:
-            c_calc = 0.0
 
         # Simpan ke database
         question.irt_a = round(a_calc, 3)
         question.irt_b = round(b_calc, 3)
         question.irt_c = round(c_calc, 3)
-        
+
         item_params['a'].append(a_calc)
         item_params['b'].append(b_calc)
         item_params['c'].append(c_calc)
 
-    # 3. Estimasi Kemampuan Theta Peserta (Overall & Per Subtest)
-    subtests = {ts.subtest_id: ts.subtest for ts in package.package_subtests if ts.subtest}
-    session_thetas = []
+    # 3. Estimasi Kemampuan Theta Peserta per Subtes yang dikerjakan
+    package_subtest_ids = [ts.subtest_id for ts in package.package_subtests if ts.subtest]
+    scored_at = datetime.now(timezone.utc)
 
     for s_idx, session in enumerate(completed_sessions):
-        # Overall Theta
-        student_responses = response_matrix[s_idx, :]
-        theta = estimate_theta(student_responses, item_params)
-        session_thetas.append(theta)
-        
-        # Subtest-specific Theta & Breakdown
-        for subtest_id, subtest in subtests.items():
-            subtest_q_indices = [
-                q_idx for q_idx, q in enumerate(package_questions) 
-                if q.subtest_id == subtest_id
-            ]
-            if subtest_q_indices:
-                sub_resp = student_responses[subtest_q_indices]
-                sub_params = {
-                    'a': [item_params['a'][i] for i in subtest_q_indices],
-                    'b': [item_params['b'][i] for i in subtest_q_indices],
-                    'c': [item_params['c'][i] for i in subtest_q_indices],
-                }
-                sub_theta = estimate_theta(sub_resp, sub_params)
-                
-                # Raw correct
-                correct_count = int(np.sum(sub_resp))
-                total_count = len(subtest_q_indices)
-                
-                # Cari atau buat record SubtestScore
-                sub_score_rec = SubtestScore.query.filter_by(
-                    exam_session_id=session.id,
-                    subtest_id=subtest_id
-                ).first()
-                if not sub_score_rec:
-                    sub_score_rec = SubtestScore(
-                        exam_session_id=session.id,
-                        subtest_id=subtest_id
-                    )
-                    db.session.add(sub_score_rec)
-                
-                sub_score_rec.raw_correct = correct_count
-                sub_score_rec.raw_total = total_count
-                # Subtest scaled score: base 500 + 100 * theta (clamped 200 - 1000)
-                sub_score_rec.irt_score = round(float(np.clip(500.0 + (sub_theta * 100.0), 200.0, 1000.0)), 1)
+        attempted = session.attempted_subtest_ids
+        existing_scores = {sc.subtest_id: sc for sc in session.subtest_scores}
+        session_subtest_scores = []
 
-    # 4. Standardisasi Nilai Total Skala UTBK (200 - 1000)
-    theta_array = np.array(session_thetas)
-    mean_theta = np.mean(theta_array)
-    std_theta = np.std(theta_array)
-    
-    scaled_scores = []
-    for theta in session_thetas:
-        if std_theta > 0.01:
-            # Standarisasi z-score -> Mean 600, SD 120 (Standard SNBT Distribution)
-            z = (theta - mean_theta) / std_theta
-            scaled = 600.0 + (z * 120.0)
-        else:
-            scaled = 500.0 + (theta * 100.0)
-            
-        scaled_clamped = float(np.clip(scaled, 200.0, 1000.0))
-        scaled_scores.append(round(scaled_clamped, 1))
+        for subtest_id in package_subtest_ids:
+            subtest_q_indices = subtest_item_indices.get(subtest_id, [])
+            sub_score_rec = existing_scores.pop(subtest_id, None)
 
-    # 5. Tetapkan Skor Akhir dan Peringkat Nasional
-    session_score_pairs = list(zip(completed_sessions, scaled_scores, raw_scores))
-    # Urutkan berdasarkan skor IRT tertinggi, lalu raw score
-    session_score_pairs.sort(key=lambda x: (x[1], x[2]), reverse=True)
+            if subtest_id not in attempted or not subtest_q_indices:
+                # Subtes tidak dikerjakan: tidak mendapat skor
+                if sub_score_rec:
+                    session.subtest_scores.remove(sub_score_rec)
+                continue
 
-    for rank, (session, scaled_score, raw_score) in enumerate(session_score_pairs, start=1):
-        session.total_irt_score = scaled_score
-        session.total_raw_score = float(raw_score)
-        session.national_rank = rank
+            sub_resp = response_matrix[s_idx, subtest_q_indices]
+            sub_params = {
+                'a': [item_params['a'][i] for i in subtest_q_indices],
+                'b': [item_params['b'][i] for i in subtest_q_indices],
+                'c': [item_params['c'][i] for i in subtest_q_indices],
+            }
+            sub_theta = estimate_theta(sub_resp, sub_params)
+
+            if not sub_score_rec:
+                sub_score_rec = SubtestScore(subtest_id=subtest_id)
+                session.subtest_scores.append(sub_score_rec)
+
+            sub_score_rec.raw_correct = int(np.sum(sub_resp))
+            sub_score_rec.raw_total = len(subtest_q_indices)
+            # Subtest scaled score: base 500 + 100 * theta (clamped 200 - 1000)
+            sub_score_rec.irt_score = round(float(np.clip(500.0 + (sub_theta * 100.0), 200.0, 1000.0)), 1)
+            session_subtest_scores.append(sub_score_rec.irt_score)
+
+        # Skor subtes yang sudah tidak ada di paket ikut dibersihkan
+        for stale_rec in existing_scores.values():
+            session.subtest_scores.remove(stale_rec)
+
+        # 4. Skor Total = rata-rata skor subtes (seperti UTBK)
+        session.total_raw_score = float(np.nansum(response_matrix[s_idx]))
+        session.total_irt_score = round(float(np.mean(session_subtest_scores)), 1) if session_subtest_scores else None
+        session.irt_scored_at = scored_at
+
+    # 5. Peringkat Nasional hanya untuk akun peserta yang mengerjakan seluruh subtes
+    ranked_count = assign_national_ranks(package_id)
 
     package.is_irt_calculated = True
     db.session.commit()
-    
-    return True, f"Kalkulasi IRT berhasil diselesaikan untuk {num_students} peserta dan {num_items} butir soal."
+
+    message = (
+        f"Kalkulasi IRT berhasil diselesaikan untuk {num_participants} peserta dan {num_items} butir soal "
+        f"({ranked_count} peserta mengerjakan lengkap dan masuk peringkat)."
+    )
+    staff_count = num_students - num_participants
+    if staff_count:
+        message += (
+            f" {staff_count} sesi akun admin/supervisor tetap dinilai, "
+            "tetapi tidak ikut kalibrasi soal maupun peringkat."
+        )
+    if closed_count:
+        message += f" {closed_count} sesi yang belum diselesaikan peserta ditutup otomatis."
+    return True, message + running_note

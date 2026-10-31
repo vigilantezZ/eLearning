@@ -17,6 +17,7 @@ class User(UserMixin, db.Model):
     grade = db.Column(db.String(32), nullable=True)  # e.g., '12 SMA', 'Gap Year', '11 SMA'
     photo_filename = db.Column(db.String(256), nullable=True)
     role = db.Column(db.String(20), default='peserta', nullable=False)  # 'admin', 'supervisor', 'peserta'
+    must_change_password = db.Column(db.Boolean, default=False, nullable=False)  # True setelah password direset admin
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
@@ -221,7 +222,9 @@ class TryoutPackage(db.Model):
     
     is_published = db.Column(db.Boolean, default=False, nullable=False)
     is_irt_calculated = db.Column(db.Boolean, default=False, nullable=False)
-    
+    # True: peserta bebas memilih urutan subtes; False: wajib berurutan sesuai order_num (simulasi UTBK)
+    free_subtest_order = db.Column(db.Boolean, default=True, nullable=False)
+
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -238,6 +241,16 @@ class TryoutPackage(db.Model):
     def total_questions_count(self):
         return len(self.package_questions)
 
+    @property
+    def pending_irt_count(self):
+        """Peserta yang sudah selesai setelah kalkulasi IRT terakhir (skornya belum dihitung).
+        Sesi uji coba akun admin/supervisor tidak dihitung karena tidak memengaruhi peringkat."""
+        return self.exam_sessions.join(User, ExamSession.user_id == User.id).filter(
+            ExamSession.status == 'completed',
+            ExamSession.irt_scored_at.is_(None),
+            User.role == 'peserta'
+        ).count()
+
     def is_active_now(self):
         now = datetime.now(timezone.utc)
         if not self.is_published:
@@ -247,6 +260,12 @@ class TryoutPackage(db.Model):
         if self.end_time and now > self.end_time.replace(tzinfo=timezone.utc if self.end_time.tzinfo is None else self.end_time.tzinfo):
             return False
         return True
+
+    def has_ended(self):
+        if not self.end_time:
+            return False
+        end = self.end_time if self.end_time.tzinfo else self.end_time.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) > end
 
 
 class TryoutSubtest(db.Model):
@@ -278,9 +297,10 @@ class ExamSession(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     tryout_package_id = db.Column(db.Integer, db.ForeignKey('tryout_packages.id', ondelete='CASCADE'), nullable=False)
     
-    current_subtest_index = db.Column(db.Integer, default=0, nullable=False)  # Pointer to active subtest
-    current_subtest_start = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # Start time for current subtest timer
-    
+    # Legacy (alur berurutan lama): progres subtes kini dicatat di ExamSubtestAttempt
+    current_subtest_index = db.Column(db.Integer, default=0, nullable=False)
+    current_subtest_start = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
     start_time = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     submitted_at = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='in_progress', nullable=False)  # 'in_progress', 'completed', 'expired'
@@ -288,18 +308,50 @@ class ExamSession(db.Model):
     total_raw_score = db.Column(db.Float, default=0.0)
     total_irt_score = db.Column(db.Float, default=0.0)
     national_rank = db.Column(db.Integer, nullable=True)
+    irt_scored_at = db.Column(db.DateTime, nullable=True)  # Diisi saat ikut kalkulasi IRT; None = skor belum dihitung
     ip_address = db.Column(db.String(64), nullable=True)
 
     # Relationships
     answers = db.relationship('ExamAnswer', backref='exam_session', lazy='joined', cascade='all, delete-orphan')
     subtest_scores = db.relationship('SubtestScore', backref='exam_session', lazy='joined', cascade='all, delete-orphan')
+    subtest_attempts = db.relationship('ExamSubtestAttempt', backref='exam_session', lazy='select', cascade='all, delete-orphan')
 
     @property
     def answered_count(self):
         return sum(1 for a in self.answers if a.user_answer_json not in (None, '""', 'null', '[]'))
 
+    @property
+    def active_attempt(self):
+        return next((a for a in self.subtest_attempts if a.status == 'in_progress'), None)
+
+    @property
+    def attempted_subtest_ids(self):
+        """Subtes yang pernah dibuka peserta (sedang berjalan atau sudah selesai)"""
+        return {a.subtest_id for a in self.subtest_attempts}
+
+    @property
+    def is_full_attempt(self):
+        """True bila seluruh subtes dalam paket sudah dikerjakan (syarat masuk peringkat)"""
+        package_subtest_ids = {ts.subtest_id for ts in self.tryout_package.package_subtests}
+        return package_subtest_ids <= self.attempted_subtest_ids
+
     def __repr__(self):
         return f"<ExamSession {self.id} User:{self.user_id} Status:{self.status}>"
+
+
+class ExamSubtestAttempt(db.Model):
+    """Status pengerjaan satu subtes dalam sesi ujian. Subtes yang belum dibuka tidak memiliki baris."""
+    __tablename__ = 'exam_subtest_attempts'
+    __table_args__ = (db.UniqueConstraint('exam_session_id', 'subtest_id', name='uq_attempt_session_subtest'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    exam_session_id = db.Column(db.Integer, db.ForeignKey('exam_sessions.id', ondelete='CASCADE'), nullable=False)
+    subtest_id = db.Column(db.Integer, db.ForeignKey('subtests.id', ondelete='CASCADE'), nullable=False)
+    status = db.Column(db.String(20), default='in_progress', nullable=False)  # 'in_progress', 'finished'
+    started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    subtest = db.relationship('Subtest', lazy='joined')
 
 
 class ExamAnswer(db.Model):
@@ -358,3 +410,35 @@ class ActivityLog(db.Model):
 
     def __repr__(self):
         return f"<ActivityLog {self.action} User:{self.user_id}>"
+
+
+def normalize_phone(phone):
+    """08xx / +62 8xx / 62-8xx -> 628xx (format wa.me). None bila kosong."""
+    digits = ''.join(ch for ch in (phone or '') if ch.isdigit())
+    if digits.startswith('0'):
+        digits = '62' + digits[1:]
+    return digits or None
+
+
+class PasswordResetRequest(db.Model):
+    """Permintaan Lupa Password dari user. Diproses manual oleh admin (password sementara dikirim via WA/telepon)."""
+    __tablename__ = 'password_reset_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    contact_phone = db.Column(db.String(20), nullable=True)  # Nomor yang diisi di form (bisa berbeda dari profil)
+    note = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='pending', nullable=False)  # 'pending', 'resolved', 'rejected'
+    ip_address = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    resolved_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+
+    user = db.relationship('User', foreign_keys=[user_id],
+                           backref=db.backref('password_reset_requests', lazy='dynamic', cascade='all, delete-orphan'))
+    resolved_by = db.relationship('User', foreign_keys=[resolved_by_id])
+
+    @property
+    def contact_differs(self):
+        """Nomor di form berbeda dari nomor terdaftar: admin perlu verifikasi identitas dulu"""
+        return bool(self.contact_phone) and normalize_phone(self.contact_phone) != normalize_phone(self.user.phone)

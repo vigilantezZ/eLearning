@@ -38,14 +38,17 @@
 
       <div class="form-group">
         <label class="form-label">Topik / Kompetensi (Tier 3 Opsional)</label>
-        <select id="topic_id" name="topic_id" class="form-control">
+        <!-- Opsi diisi JS sesuai subtes terpilih -->
+        <select id="topic_id" name="topic_id" class="form-control" onchange="toggleNewTopicInput(true)"
+                data-selected="{{ question.topic_id if question and question.topic_id else '' }}">
           <option value="">-- Tanpa Topik Khusus --</option>
-          {% for t in topics %}
-          <option value="{{ t.id }}" data-subtest="{{ t.subtest_id }}" {% if question and question.topic_id == t.id %}selected{% endif %}>
-            {{ t.name }}
-          </option>
-          {% endfor %}
         </select>
+        <input type="text" id="new_topic_name" name="new_topic_name" class="form-control" maxlength="128"
+               placeholder="Nama topik baru, mis. Penalaran Induktif" style="display: none; margin-top: 0.5rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">
+          Topik belum ada? Pilih <b>+ Tambah topik baru</b>, atau
+          <a href="{{ url_for('supervisor.structure_manager') }}" target="_blank">kelola daftar topik</a>.
+        </div>
       </div>
 
       <div class="form-group">
@@ -230,19 +233,43 @@ function switchQuestionType(type) {
   document.getElementById('section-builder-isian').style.display = type === 'isian' ? 'block' : 'none';
 }
 
+const TOPICS = [
+  {% for t in topics %}{ id: {{ t.id }}, subtest: {{ t.subtest_id }}, name: {{ t.name | tojson }} }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+const NEW_TOPIC = '__new__';
+
+// Opsi dibangun ulang (bukan disembunyikan) agar topik dari subtes lain tidak ikut terpilih/terkirim
 function loadTopicsBySubtest(subtestId) {
   const topicSelect = document.getElementById('topic_id');
-  const options = topicSelect.querySelectorAll('option');
-  
-  options.forEach(opt => {
-    if (!opt.value) return; // Keep the default "Tanpa Topik"
-    const sub = opt.getAttribute('data-subtest');
-    if (!subtestId || sub === subtestId) {
-      opt.style.display = 'block';
-    } else {
-      opt.style.display = 'none';
-    }
-  });
+  const previous = topicSelect.value || topicSelect.dataset.selected;
+  topicSelect.dataset.selected = '';
+  topicSelect.innerHTML = '';
+
+  if (!subtestId) {
+    topicSelect.add(new Option('-- Pilih subtes terlebih dahulu --', ''));
+    topicSelect.disabled = true;
+    toggleNewTopicInput(false);
+    return;
+  }
+
+  topicSelect.disabled = false;
+  topicSelect.add(new Option('-- Tanpa Topik Khusus --', ''));
+  TOPICS.filter(t => String(t.subtest) === String(subtestId))
+        .forEach(t => topicSelect.add(new Option(t.name, t.id)));
+  topicSelect.add(new Option('+ Tambah topik baru…', NEW_TOPIC));
+
+  const stillAvailable = Array.from(topicSelect.options).some(opt => opt.value === String(previous));
+  topicSelect.value = stillAvailable ? String(previous) : '';
+  toggleNewTopicInput(false);
+}
+
+function toggleNewTopicInput(focus) {
+  const isNew = document.getElementById('topic_id').value === NEW_TOPIC;
+  const input = document.getElementById('new_topic_name');
+  input.style.display = isNew ? 'block' : 'none';
+  input.required = isNew;
+  if (isNew && focus) input.focus();
 }
 
 // Initial setup on page load
@@ -252,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switchQuestionType(selectedType.value);
   }
   const subtestSelect = document.getElementById('subtest_id');
-  if (subtestSelect && subtestSelect.value) {
+  if (subtestSelect) {
     loadTopicsBySubtest(subtestSelect.value);
   }
 });

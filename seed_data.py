@@ -4,7 +4,7 @@ from app import create_app, db
 from app.models import (
     User, TestGroup, Subtest, Topic, Question, 
     TryoutPackage, TryoutSubtest, TryoutQuestion, 
-    ExamSession, ExamAnswer, SubtestScore, ActivityLog
+    ExamSession, ExamAnswer, SubtestScore, ActivityLog, ExamSubtestAttempt
 )
 from app.irt_engine import calculate_irt_for_package
 
@@ -354,7 +354,6 @@ def seed_database():
             session = ExamSession(
                 user_id=student.id,
                 tryout_package_id=pkg.id,
-                current_subtest_index=len(subtest_timer_configs),
                 start_time=now - timedelta(minutes=60),
                 submitted_at=now - timedelta(minutes=5),
                 status='completed',
@@ -362,6 +361,19 @@ def seed_database():
             )
             db.session.add(session)
             db.session.flush()
+
+            # All subtests attempted so the demo sessions are ranked
+            subtest_start = session.start_time
+            for sub_id, duration, _order_idx in subtest_timer_configs:
+                time_spent = timedelta(minutes=duration / 2)
+                db.session.add(ExamSubtestAttempt(
+                    exam_session_id=session.id,
+                    subtest_id=sub_id,
+                    status='finished',
+                    started_at=subtest_start,
+                    finished_at=subtest_start + time_spent
+                ))
+                subtest_start += time_spent
 
             raw_correct = 0
             for q_idx, q in enumerate(sample_questions, start=1):

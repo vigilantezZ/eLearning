@@ -55,6 +55,9 @@
             <li>
               <a href="{{ url_for('admin.dashboard') }}" class="nav-link {% if 'admin' in request.endpoint %}active{% endif %}">
                 <i class="fas fa-user-shield"></i> Panel Admin
+                {% if pending_password_resets %}
+                  <span class="badge badge-danger" title="Permintaan reset password menunggu">{{ pending_password_resets }}</span>
+                {% endif %}
               </a>
             </li>
           {% endif %}

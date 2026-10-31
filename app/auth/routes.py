@@ -4,9 +4,12 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from app import db
-from app.models import User, ActivityLog
+from app.models import User, ActivityLog, PasswordResetRequest
 
 auth_bp = Blueprint('auth', __name__)
+
+# Halaman yang tetap boleh dibuka selama user wajib mengganti password
+PASSWORD_CHANGE_ALLOWED_ENDPOINTS = {'auth.change_password', 'auth.logout', 'static', 'serve_uploaded_media'}
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 
@@ -21,6 +24,23 @@ def log_user_activity(user_id, action, details):
         db.session.commit()
     except Exception:
         db.session.rollback()
+
+def home_url(user):
+    if user.is_admin:
+        return url_for('admin.dashboard')
+    elif user.is_supervisor:
+        return url_for('supervisor.dashboard')
+    return url_for('exam.catalog')
+
+
+@auth_bp.before_app_request
+def enforce_password_change():
+    """User yang passwordnya baru direset admin wajib membuat password sendiri sebelum memakai aplikasi"""
+    if not current_user.is_authenticated or not current_user.must_change_password:
+        return None
+    if request.endpoint is None or request.endpoint in PASSWORD_CHANGE_ALLOWED_ENDPOINTS:
+        return None
+    return redirect(url_for('auth.change_password'))
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -47,6 +67,11 @@ def login():
             session.permanent = True
             login_user(user, remember=remember)
             log_user_activity(user.id, 'LOGIN', f"User {user.username} logged in successfully.")
+
+            if user.must_change_password:
+                flash('Anda masuk dengan password sementara dari admin. Silakan buat password baru terlebih dahulu.', 'warning')
+                return redirect(url_for('auth.change_password'))
+
             flash(f"Selamat datang kembali, {user.full_name}!", 'success')
 
             next_page = request.args.get('next')
@@ -128,6 +153,78 @@ def register():
         return redirect(url_for('auth.login'))
 
     return render_template('auth/register.html')
+
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('auth.profile'))
+
+    if request.method == 'POST':
+        login_input = request.form.get('login_input', '').strip().lower()
+        contact_phone = request.form.get('contact_phone', '').strip()[:20]
+        note = request.form.get('note', '').strip()[:500]
+
+        if not login_input:
+            flash('Masukkan username atau email akun Anda.', 'warning')
+            return render_template('auth/forgot_password.html')
+
+        user = User.query.filter(
+            (db.func.lower(User.username) == login_input) | (db.func.lower(User.email) == login_input)
+        ).first()
+
+        if user:
+            # Satu permintaan aktif per user: permintaan ulang hanya memperbarui kontak & catatan
+            pending = PasswordResetRequest.query.filter_by(user_id=user.id, status='pending').first()
+            if pending:
+                pending.contact_phone = contact_phone or pending.contact_phone
+                pending.note = note or pending.note
+            else:
+                db.session.add(PasswordResetRequest(
+                    user_id=user.id,
+                    contact_phone=contact_phone or None,
+                    note=note or None,
+                    ip_address=request.remote_addr
+                ))
+            db.session.commit()
+            log_user_activity(user.id, 'FORGOT_PASSWORD_REQUEST', f"Password reset requested for {user.username}.")
+
+        # Pesan dibuat sama untuk akun ada / tidak ada agar username terdaftar tidak bisa ditebak
+        flash('Permintaan reset password sudah diteruskan ke admin (jika akun ditemukan). '
+              'Admin akan menghubungi Anda melalui nomor HP yang terdaftar di akun untuk memberikan password sementara.', 'info')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/forgot_password.html')
+
+
+@auth_bp.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if not current_user.must_change_password:
+        return redirect(url_for('auth.profile'))
+
+    if request.method == 'POST':
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if len(new_password) < 6:
+            flash('Password baru minimal 6 karakter.', 'danger')
+            return render_template('auth/change_password.html')
+        if new_password != confirm_password:
+            flash('Konfirmasi password baru tidak cocok.', 'danger')
+            return render_template('auth/change_password.html')
+        if current_user.check_password(new_password):
+            flash('Password baru tidak boleh sama dengan password sementara dari admin.', 'danger')
+            return render_template('auth/change_password.html')
+
+        current_user.set_password(new_password)
+        current_user.must_change_password = False
+        db.session.commit()
+        log_user_activity(current_user.id, 'PASSWORD_CHANGED', f"User {current_user.username} set a new password after admin reset.")
+        flash('Password baru berhasil disimpan. Selamat datang kembali!', 'success')
+        return redirect(home_url(current_user))
+
+    return render_template('auth/change_password.html')
 
 
 @auth_bp.route('/logout')

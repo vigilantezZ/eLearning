@@ -1,24 +1,35 @@
 import os
 import uuid
-from datetime import datetime
+import secrets
+from datetime import datetime, timezone, timedelta
 from functools import wraps
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
+from urllib.parse import quote
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, make_response
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import db
 from app.models import (
     User, TestGroup, Subtest, Topic, Question, 
     TryoutPackage, TryoutSubtest, TryoutQuestion, 
-    ExamSession, ExamAnswer, SubtestScore, ActivityLog
+    ExamSession, ExamAnswer, SubtestScore, ActivityLog, PasswordResetRequest, normalize_phone
 )
-from app.irt_engine import calculate_irt_for_package
+from app.irt_engine import calculate_irt_for_package, assign_national_ranks
+from app.subtest_flow import sync_expired_attempts
 
 admin_bp = Blueprint('admin', __name__)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
+WIB = timezone(timedelta(hours=7))
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def parse_wib_datetime(value):
+    """Input datetime-local form (WIB) -> naive UTC, sesuai format penyimpanan database"""
+    if not value:
+        return None
+    local_dt = datetime.strptime(value, '%Y-%m-%dT%H:%M').replace(tzinfo=WIB)
+    return local_dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 def admin_required(f):
     @wraps(f)
@@ -169,6 +180,7 @@ def user_edit(user_id):
         target_user.phone = request.form.get('phone', '').strip()
         target_user.school = request.form.get('school', '').strip()
         target_user.grade = request.form.get('grade', '').strip()
+        old_role = target_user.role
         target_user.role = request.form.get('role', target_user.role)
 
         password = request.form.get('password', '')
@@ -185,6 +197,11 @@ def user_edit(user_id):
                 photo_filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
                 file.save(os.path.join(current_app.config['UPLOAD_FOLDER_AVATARS'], photo_filename))
                 target_user.photo_filename = photo_filename
+
+        # Peringkat hanya untuk akun peserta: susun ulang paket yang pernah dikerjakan bila role berubah
+        if target_user.role != old_role:
+            for package_id in {s.tryout_package_id for s in target_user.exam_sessions.filter_by(status='completed')}:
+                assign_national_ranks(package_id)
 
         db.session.commit()
         flash(f"Data pengguna '{target_user.username}' berhasil diperbarui.", 'success')
@@ -203,10 +220,114 @@ def user_delete(user_id):
 
     target_user = User.query.get_or_404(user_id)
     username = target_user.username
+    ranked_package_ids = {
+        s.tryout_package_id for s in target_user.exam_sessions.filter(ExamSession.national_rank.isnot(None))
+    }
     db.session.delete(target_user)
+    db.session.flush()
+    # Peringkat peserta lain dirapatkan agar tidak ada nomor yang bolong
+    for package_id in ranked_package_ids:
+        assign_national_ranks(package_id)
     db.session.commit()
     flash(f"Pengguna '{username}' berhasil dihapus.", 'info')
     return redirect(url_for('admin.users'))
+
+
+# ==========================================
+# Lupa Password (Permintaan Reset oleh User)
+# ==========================================
+
+# Tanpa karakter yang mudah tertukar saat dibacakan/diketik (0/O, 1/l/I)
+TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+
+def generate_temp_password(length=8):
+    return ''.join(secrets.choice(TEMP_PASSWORD_ALPHABET) for _ in range(length))
+
+
+@admin_bp.route('/password-resets')
+@login_required
+@admin_required
+def password_resets():
+    pending_requests = PasswordResetRequest.query.filter_by(status='pending').order_by(PasswordResetRequest.created_at.asc()).all()
+    processed_requests = PasswordResetRequest.query.filter(
+        PasswordResetRequest.status != 'pending'
+    ).order_by(PasswordResetRequest.resolved_at.desc()).limit(20).all()
+
+    return render_template(
+        'admin/password_resets.html',
+        pending_requests=pending_requests,
+        processed_requests=processed_requests
+    )
+
+
+@admin_bp.route('/password-resets/<int:request_id>/approve', methods=['POST'])
+@login_required
+@admin_required
+def password_reset_approve(request_id):
+    reset_req = PasswordResetRequest.query.get_or_404(request_id)
+    if reset_req.status != 'pending':
+        flash('Permintaan ini sudah diproses sebelumnya.', 'info')
+        return redirect(url_for('admin.password_resets'))
+
+    target_user = reset_req.user
+    temp_password = generate_temp_password()
+    target_user.set_password(temp_password)
+    target_user.must_change_password = True
+
+    reset_req.status = 'resolved'
+    reset_req.resolved_at = datetime.now(timezone.utc)
+    reset_req.resolved_by_id = current_user.id
+
+    db.session.add(ActivityLog(
+        user_id=current_user.id,
+        action='PASSWORD_RESET',
+        details=f"Admin {current_user.username} reset the password of {target_user.username} (forgot-password request #{reset_req.id})",
+        ip_address=request.remote_addr
+    ))
+    db.session.commit()
+
+    wa_number = normalize_phone(target_user.phone)
+    wa_url = None
+    if wa_number:
+        wa_message = (
+            f"Halo {target_user.full_name}, password sementara akun BMP Tryout Anda (username: {target_user.username}) "
+            f"adalah: {temp_password}\nSilakan login lalu buat password baru."
+        )
+        wa_url = f"https://wa.me/{wa_number}?text={quote(wa_message)}"
+
+    # Password sementara hanya ditampilkan sekali dan tidak boleh tersimpan di cache browser
+    response = make_response(render_template(
+        'admin/password_reset_done.html',
+        target_user=target_user,
+        temp_password=temp_password,
+        wa_url=wa_url
+    ))
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@admin_bp.route('/password-resets/<int:request_id>/reject', methods=['POST'])
+@login_required
+@admin_required
+def password_reset_reject(request_id):
+    reset_req = PasswordResetRequest.query.get_or_404(request_id)
+    if reset_req.status != 'pending':
+        flash('Permintaan ini sudah diproses sebelumnya.', 'info')
+        return redirect(url_for('admin.password_resets'))
+
+    reset_req.status = 'rejected'
+    reset_req.resolved_at = datetime.now(timezone.utc)
+    reset_req.resolved_by_id = current_user.id
+    db.session.add(ActivityLog(
+        user_id=current_user.id,
+        action='PASSWORD_RESET_REJECTED',
+        details=f"Admin {current_user.username} rejected forgot-password request #{reset_req.id} for {reset_req.user.username}",
+        ip_address=request.remote_addr
+    ))
+    db.session.commit()
+
+    flash(f"Permintaan reset password untuk '{reset_req.user.username}' ditolak.", 'info')
+    return redirect(url_for('admin.password_resets'))
 
 
 # ==========================================
@@ -229,12 +350,10 @@ def package_new():
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
         is_published = bool(request.form.get('is_published'))
-        
-        start_time_str = request.form.get('start_time')
-        end_time_str = request.form.get('end_time')
-        
-        start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M') if start_time_str else None
-        end_time = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M') if end_time_str else None
+        free_subtest_order = request.form.get('subtest_order_mode', 'free') != 'sequential'
+
+        start_time = parse_wib_datetime(request.form.get('start_time'))
+        end_time = parse_wib_datetime(request.form.get('end_time'))
 
         if not title:
             flash('Judul Paket Tryout wajib diisi.', 'danger')
@@ -246,6 +365,7 @@ def package_new():
             start_time=start_time,
             end_time=end_time,
             is_published=is_published,
+            free_subtest_order=free_subtest_order,
             created_by_id=current_user.id
         )
         db.session.add(pkg)
@@ -300,11 +420,10 @@ def package_edit(package_id):
         pkg.title = request.form.get('title', '').strip()
         pkg.description = request.form.get('description', '').strip()
         pkg.is_published = bool(request.form.get('is_published'))
-        
-        start_time_str = request.form.get('start_time')
-        end_time_str = request.form.get('end_time')
-        pkg.start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M') if start_time_str else None
-        pkg.end_time = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M') if end_time_str else None
+        pkg.free_subtest_order = request.form.get('subtest_order_mode', 'free') != 'sequential'
+
+        pkg.start_time = parse_wib_datetime(request.form.get('start_time'))
+        pkg.end_time = parse_wib_datetime(request.form.get('end_time'))
 
         # Re-sync subtests and durations
         TryoutSubtest.query.filter_by(tryout_package_id=pkg.id).delete()
@@ -381,20 +500,24 @@ def irt_calculator():
     selected_package = TryoutPackage.query.get(selected_package_id) if selected_package_id else None
     completed_sessions = []
     package_questions = []
+    in_progress_count = 0
 
     if selected_package:
+        # Peserta berperingkat di atas, peserta tidak lengkap (tanpa peringkat) di bawah
         completed_sessions = ExamSession.query.filter_by(
             tryout_package_id=selected_package.id,
             status='completed'
-        ).order_by(ExamSession.national_rank.asc()).all()
+        ).order_by(ExamSession.national_rank.is_(None), ExamSession.national_rank.asc()).all()
         package_questions = [tq.question for tq in selected_package.package_questions if tq.question is not None]
+        in_progress_count = selected_package.exam_sessions.filter_by(status='in_progress').count()
 
     return render_template(
         'admin/irt_calculator.html',
         packages=packages,
         selected_package=selected_package,
         completed_sessions=completed_sessions,
-        package_questions=package_questions
+        package_questions=package_questions,
+        in_progress_count=in_progress_count
     )
 
 
@@ -428,6 +551,9 @@ def run_irt_calculation(package_id):
 @supervisor_or_admin_required
 def live_monitor():
     active_sessions = ExamSession.query.filter_by(status='in_progress').order_by(ExamSession.start_time.desc()).all()
+    # Kunci subtes yang timernya sudah habis agar kolom "Subtes Aktif" akurat
+    if any([sync_expired_attempts(s) for s in active_sessions]):
+        db.session.commit()
     completed_sessions = ExamSession.query.filter_by(status='completed').order_by(ExamSession.submitted_at.desc()).limit(15).all()
     recent_logs = ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(30).all()
 

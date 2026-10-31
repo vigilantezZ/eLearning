@@ -35,7 +35,10 @@
       <div>
         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
           <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--primary-900);">{{ selected_package.title }}</h2>
-          {% if selected_package.is_irt_calculated %}
+          {% set pending_irt = selected_package.pending_irt_count %}
+          {% if selected_package.is_irt_calculated and pending_irt %}
+            <span class="badge badge-warning"><i class="fas fa-redo"></i> Perlu Dihitung Ulang ({{ pending_irt }} peserta baru)</span>
+          {% elif selected_package.is_irt_calculated %}
             <span class="badge badge-success"><i class="fas fa-check-circle"></i> Hasil IRT Terkalibrasi</span>
           {% else %}
             <span class="badge badge-warning"><i class="fas fa-clock"></i> Belum Dikalibrasi</span>
@@ -44,10 +47,20 @@
         <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 750px;">
           Terdapat <b>{{ completed_sessions|length }} peserta</b> yang telah menyelesaikan ujian dan <b>{{ package_questions|length }} butir soal</b>. Klik tombol di samping untuk mengalibrasi tingkat kesulitan empiris dan menghitung nilai IRT seluruh peserta.
         </p>
+        {% if in_progress_count %}
+        <p style="color: var(--warning-700); font-size: 0.85rem; max-width: 750px; margin-top: 0.5rem;">
+          <i class="fas fa-exclamation-triangle"></i> <b>{{ in_progress_count }} peserta</b> belum menekan Selesai Tryout.
+          Saat IRT dihitung, sesi yang sedang tidak mengerjakan subtes akan <b>ditutup otomatis</b> dan ikut dinilai.
+          Peserta yang sedang mengerjakan subtes belum diikutkan.
+        </p>
+        {% endif %}
+        <p style="color: var(--text-muted); font-size: 0.8rem; max-width: 750px; margin-top: 0.5rem;">
+          Subtes yang tidak dikerjakan tidak ikut kalibrasi. Skor total = rata-rata skor subtes. Peringkat hanya untuk peserta yang mengerjakan seluruh subtes.
+        </p>
       </div>
 
       <form method="POST" action="{{ url_for('admin.run_irt_calculation', package_id=selected_package.id) }}">
-        <button type="submit" class="btn btn-primary btn-lg" {% if completed_sessions|length == 0 %}disabled{% endif %}>
+        <button type="submit" class="btn btn-primary btn-lg" {% if completed_sessions|length == 0 and not in_progress_count %}disabled{% endif %}>
           <i class="fas fa-cogs"></i> Hitung Nilai IRT Batch
         </button>
       </form>
@@ -123,6 +136,7 @@
             <th style="width: 80px; text-align: center;">Peringkat</th>
             <th>Peserta</th>
             <th>Asal Sekolah</th>
+            <th>Subtes Dikerjakan</th>
             <th>Benar (Raw)</th>
             <th>Nilai Terstandarisasi IRT</th>
             <th>Waktu Pengerjaan</th>
@@ -138,8 +152,16 @@
                 <span style="font-size: 1.1rem; color: #94a3b8; font-weight: 800;"><i class="fas fa-medal"></i> 2</span>
               {% elif s.national_rank == 3 %}
                 <span style="font-size: 1.1rem; color: #b45309; font-weight: 800;"><i class="fas fa-medal"></i> 3</span>
+              {% elif s.national_rank %}
+                <span style="font-weight: 700; color: var(--text-muted);">#{{ s.national_rank }}</span>
+              {% elif not s.user.is_peserta %}
+                <span class="badge badge-neutral" title="Akun admin/supervisor tidak masuk peringkat dan kalibrasi soal">Akun {{ s.user.role }}</span>
+              {% elif not s.irt_scored_at %}
+                <span class="badge badge-warning">Belum dihitung</span>
+              {% elif not s.is_full_attempt %}
+                <span class="badge badge-neutral">Tidak lengkap</span>
               {% else %}
-                <span style="font-weight: 700; color: var(--text-muted);">#{{ s.national_rank or loop.index }}</span>
+                <span style="color: var(--text-muted);">-</span>
               {% endif %}
             </td>
             <td>
@@ -156,12 +178,19 @@
               <div style="font-size: 0.75rem; color: var(--text-muted);">{{ s.user.grade or '-' }}</div>
             </td>
             <td>
+              <b>{{ s.attempted_subtest_ids|length }}</b> / {{ selected_package.package_subtests|length }}
+            </td>
+            <td>
               <b>{{ s.total_raw_score | int }}</b> / {{ package_questions|length }} Soal
             </td>
             <td>
+              {% if s.irt_scored_at %}
               <div style="font-size: 1.2rem; font-weight: 800; color: var(--primary-700);">
                 {{ s.total_irt_score | format_score }}
               </div>
+              {% else %}
+              <span style="color: var(--text-muted); font-size: 0.85rem;">Menunggu IRT</span>
+              {% endif %}
             </td>
             <td style="font-size: 0.85rem; color: var(--text-muted);">
               {{ s.submitted_at | datetime_format }}
@@ -169,7 +198,7 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
               Belum ada data peserta yang menyelesaikan ujian pada paket ini.
             </td>
           </tr>

@@ -36,12 +36,12 @@
     <div class="grid-2">
       <div class="form-group">
         <label class="form-label" for="start_time">Jadwal Mulai Buka (Opsional)</label>
-        <input type="datetime-local" id="start_time" name="start_time" class="form-control" value="{{ package.start_time.strftime('%Y-%m-%dT%H:%M') if package and package.start_time else '' }}">
+        <input type="datetime-local" id="start_time" name="start_time" class="form-control" value="{{ package.start_time | datetime_format('%Y-%m-%dT%H:%M') if package and package.start_time else '' }}">
       </div>
 
       <div class="form-group">
         <label class="form-label" for="end_time">Jadwal Ditutup (Opsional)</label>
-        <input type="datetime-local" id="end_time" name="end_time" class="form-control" value="{{ package.end_time.strftime('%Y-%m-%dT%H:%M') if package and package.end_time else '' }}">
+        <input type="datetime-local" id="end_time" name="end_time" class="form-control" value="{{ package.end_time | datetime_format('%Y-%m-%dT%H:%M') if package and package.end_time else '' }}">
       </div>
     </div>
 
@@ -50,6 +50,17 @@
         <input type="checkbox" name="is_published" value="1" {% if package and package.is_published %}checked{% endif %}>
         Publikasikan paket ini agar dapat dilihat & dikerjakan oleh peserta
       </label>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="subtest_order_mode">Mode Urutan Subtes</label>
+      <select id="subtest_order_mode" name="subtest_order_mode" class="form-control">
+        <option value="free" {% if not package or package.free_subtest_order %}selected{% endif %}>Urutan bebas: peserta memilih sendiri subtes yang dikerjakan lebih dulu</option>
+        <option value="sequential" {% if package and not package.free_subtest_order %}selected{% endif %}>Berurutan: mengikuti urutan subtes di paket (simulasi UTBK resmi)</option>
+      </select>
+      <small style="color: var(--text-muted); display: block; margin-top: 0.4rem;">
+        Pada kedua mode, peserta memilih subtes dari menu, hanya satu subtes berjalan dalam satu waktu, dan tryout boleh diselesaikan tanpa mengerjakan semua subtes (tanpa peringkat).
+      </small>
     </div>
 
     <!-- Section 2: Subtests & Independent Timers -->
