@@ -3,17 +3,19 @@
 {% block title %}{% if question %}Edit Soal #{{ question.id }}{% else %}Tambah Soal Baru{% endif %} - BMP CBT{% endblock %}
 
 {% block content %}
-<div style="max-width: 900px; margin: 0 auto 2rem auto;">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+<div style="max-width: 960px; margin: 0 auto 2rem auto;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
     <div>
       <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
         <i class="fas fa-edit" style="color: var(--primary-600);"></i> {% if question %}Edit Butir Soal #{{ question.id }}{% else %}Tambah Butir Soal Baru{% endif %}
       </h1>
-      <p style="color: var(--text-muted); font-size: 0.9rem;">Lengkapi informasi soal, opsi, kunci jawaban, dan pembahasan materi.</p>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Lengkapi informasi soal, opsi jawaban, formula matematika, dan pembahasan materi.</p>
     </div>
-    <a href="{{ url_for('supervisor.questions') }}" class="btn btn-secondary">
-      <i class="fas fa-arrow-left"></i> Kembali ke Bank Soal
-    </a>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('supervisor.questions') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Kembali ke Bank Soal
+      </a>
+    </div>
   </div>
 
   <form method="POST" enctype="multipart/form-data" class="card" style="padding: 2rem;">
@@ -38,7 +40,6 @@
 
       <div class="form-group">
         <label class="form-label">Topik / Kompetensi (Tier 3 Opsional)</label>
-        <!-- Opsi diisi JS sesuai subtes terpilih -->
         <select id="topic_id" name="topic_id" class="form-control" onchange="toggleNewTopicInput(true)"
                 data-selected="{{ question.topic_id if question and question.topic_id else '' }}">
           <option value="">-- Tanpa Topik Khusus --</option>
@@ -62,7 +63,7 @@
     </div>
 
     <!-- Section 2: Question Type & Content -->
-    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.5rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.75rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
       <i class="fas fa-file-alt"></i> 2. Tipe & Teks Soal
     </h3>
 
@@ -95,9 +96,486 @@
       </div>
     </div>
 
+    <!-- =================================================================== -->
+    <!-- MS WORD STYLE EQUATION & SYMBOL RIBBON TOOLBAR -->
+    <!-- =================================================================== -->
+    <div id="ms-equation-ribbon" class="ms-eq-ribbon">
+      <div class="ms-eq-header">
+        <div class="ms-eq-title">
+          <i class="fas fa-calculator" style="color: var(--primary-600); font-size: 1.15rem;"></i>
+          <span><b>Equation & Simbol Formula</b></span>
+          <span style="font-size: 0.7rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 700;">GAYA MS WORD</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Menulis ke:</span>
+          <select id="eq-target-select" class="form-control" style="width: auto; padding: 0.3rem 0.75rem; font-size: 0.825rem; font-weight: 700; border-color: var(--primary-400); color: var(--primary-800); background: #ffffff;" onchange="setTargetField(this.value)">
+            <option value="question_text">📝 Teks Butir Soal</option>
+            <option value="opt_text_A">🔤 Opsi Jawaban A</option>
+            <option value="opt_text_B">🔤 Opsi Jawaban B</option>
+            <option value="opt_text_C">🔤 Opsi Jawaban C</option>
+            <option value="opt_text_D">🔤 Opsi Jawaban D</option>
+            <option value="opt_text_E">🔤 Opsi Jawaban E</option>
+            <option value="opt_kompleks_text_A">☑️ Pernyataan A (Kompleks)</option>
+            <option value="opt_kompleks_text_B">☑️ Pernyataan B (Kompleks)</option>
+            <option value="opt_kompleks_text_C">☑️ Pernyataan C (Kompleks)</option>
+            <option value="opt_kompleks_text_D">☑️ Pernyataan D (Kompleks)</option>
+            <option value="opt_kompleks_text_E">☑️ Pernyataan E (Kompleks)</option>
+            <option value="isian_answers">🔢 Kunci Jawaban Isian</option>
+            <option value="explanation_text">💡 Teks Pembahasan</option>
+          </select>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="toggleRibbonCollapse()" title="Sembunyikan/Tampilkan Toolbar Formula" style="padding: 0.3rem 0.6rem;">
+            <i id="ribbon-toggle-icon" class="fas fa-chevron-up"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ribbon Tabs -->
+      <div id="ms-eq-tabs-bar" class="ms-eq-tabs">
+        <button type="button" class="ms-eq-tab active" onclick="switchEqTab('tab-structures')">
+          <i class="fas fa-square-root-variable"></i> Struktur Rumus (Equation)
+        </button>
+        <button type="button" class="ms-eq-tab" onclick="switchEqTab('tab-symbols')">
+          <i class="fas fa-icons"></i> Simbol & Operator
+        </button>
+        <button type="button" class="ms-eq-tab" onclick="switchEqTab('tab-assistant')">
+          <i class="fas fa-wand-magic-sparkles"></i> Asisten Pembuat Rumus
+        </button>
+        <button type="button" class="ms-eq-tab" onclick="switchEqTab('tab-examples')">
+          <i class="fas fa-book"></i> Contoh & Panduan
+        </button>
+      </div>
+
+      <!-- Ribbon Body -->
+      <div id="ms-eq-ribbon-body" class="ms-eq-body">
+        
+        <!-- Tab 1: Struktur Rumus -->
+        <div id="tab-structures" class="tab-pane-content">
+          <div class="ms-eq-group-container">
+            
+            <!-- Group: Pecahan (Fraction) -->
+            <div class="ms-eq-group">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\frac{a}{b}$')" title="Pecahan Bertingkat">
+                  <span class="ms-eq-btn-symbol" style="display: inline-flex; flex-direction: column; align-items: center; line-height: 1;">
+                    <span style="border-bottom: 1px solid currentColor; padding: 0 2px;">a</span>
+                    <span>b</span>
+                  </span>
+                  <span class="ms-eq-btn-label">Pecahan</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\frac{df}{dx}$')" title="Turunan / Diferensial">
+                  <span class="ms-eq-btn-symbol" style="display: inline-flex; flex-direction: column; align-items: center; line-height: 1;">
+                    <span style="border-bottom: 1px solid currentColor; padding: 0 2px;">df</span>
+                    <span>dx</span>
+                  </span>
+                  <span class="ms-eq-btn-label">Turunan</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$a/b$')" title="Pecahan Linear">
+                  <span class="ms-eq-btn-symbol">a/b</span>
+                  <span class="ms-eq-btn-label">Linear</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title">Pecahan (Fraction)</div>
+            </div>
+
+            <!-- Group: Pangkat & Indeks (Script) -->
+            <div class="ms-eq-group">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$x^{2}$')" title="Pangkat Kuadrat">
+                  <span class="ms-eq-btn-symbol">x<sup>2</sup></span>
+                  <span class="ms-eq-btn-label">Kuadrat</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$x^{n}$')" title="Pangkat Bebas (Eksponen)">
+                  <span class="ms-eq-btn-symbol">x<sup>n</sup></span>
+                  <span class="ms-eq-btn-label">Pangkat n</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$x_{1}$')" title="Subskrip 1">
+                  <span class="ms-eq-btn-symbol">x<sub>1</sub></span>
+                  <span class="ms-eq-btn-label">Indeks 1</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$x_{n}$')" title="Subskrip Bebas">
+                  <span class="ms-eq-btn-symbol">x<sub>n</sub></span>
+                  <span class="ms-eq-btn-label">Indeks n</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$x_{i}^{2}$')" title="Pangkat & Indeks Sekaligus">
+                  <span class="ms-eq-btn-symbol">x<sub>i</sub><sup>2</sup></span>
+                  <span class="ms-eq-btn-label">Sub & Sup</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$10^{n}$')" title="Notasi Ilmiah 10^n">
+                  <span class="ms-eq-btn-symbol">10<sup>n</sup></span>
+                  <span class="ms-eq-btn-label">Ilmiah</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title">Pangkat & Indeks</div>
+            </div>
+
+            <!-- Group: Akar (Radical) -->
+            <div class="ms-eq-group">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\sqrt{x}$')" title="Akar Kuadrat">
+                  <span class="ms-eq-btn-symbol">&radic;x</span>
+                  <span class="ms-eq-btn-label">Akar 2</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\sqrt[n]{x}$')" title="Akar Pangkat n">
+                  <span class="ms-eq-btn-symbol"><sup>n</sup>&radic;x</span>
+                  <span class="ms-eq-btn-label">Akar n</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\sqrt[3]{x}$')" title="Akar Kubik (Pangkat 3)">
+                  <span class="ms-eq-btn-symbol"><sup>3</sup>&radic;x</span>
+                  <span class="ms-eq-btn-label">Akar 3</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\sqrt{a^2 + b^2}$')" title="Rumus Pythagoras">
+                  <span class="ms-eq-btn-symbol">&radic;(a&sup2;+b&sup2;)</span>
+                  <span class="ms-eq-btn-label">Pythagoras</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title">Akar (Radical)</div>
+            </div>
+
+            <!-- Group: Kurung (Brackets) -->
+            <div class="ms-eq-group">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$(x)$')" title="Kurung Biasa">
+                  <span class="ms-eq-btn-symbol">( x )</span>
+                  <span class="ms-eq-btn-label">Biasa</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$[x]$')" title="Kurung Siku">
+                  <span class="ms-eq-btn-symbol">[ x ]</span>
+                  <span class="ms-eq-btn-label">Siku</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\{x\\}$')" title="Kurung Kurawal (Himpunan)">
+                  <span class="ms-eq-btn-symbol">{ x }</span>
+                  <span class="ms-eq-btn-label">Himpunan</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$|x|$')" title="Nilai Mutlak">
+                  <span class="ms-eq-btn-symbol">| x |</span>
+                  <span class="ms-eq-btn-label">Mutlak</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\left( \\frac{a}{b} \\right)$')" title="Kurung Pecahan Fleksibel">
+                  <span class="ms-eq-btn-symbol">( <sup>a</sup>/<sub>b</sub> )</span>
+                  <span class="ms-eq-btn-label">Fleksibel</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title">Tanda Kurung</div>
+            </div>
+
+            <!-- Group: Operasi Besar & Kalkulus -->
+            <div class="ms-eq-group">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\sum_{i=1}^{n} x_i$')" title="Sigma / Penjumlahan">
+                  <span class="ms-eq-btn-symbol">&sum;</span>
+                  <span class="ms-eq-btn-label">Sigma</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\prod_{i=1}^{n} x_i$')" title="Notasi Perkalian">
+                  <span class="ms-eq-btn-symbol">&prod;</span>
+                  <span class="ms-eq-btn-label">Product</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\int f(x)\\,dx$')" title="Integral Tak Tentu">
+                  <span class="ms-eq-btn-symbol">&int;</span>
+                  <span class="ms-eq-btn-label">Integral</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\int_{a}^{b} f(x)\\,dx$')" title="Integral Tentu a ke b">
+                  <span class="ms-eq-btn-symbol">&int;<sub>a</sub><sup>b</sup></span>
+                  <span class="ms-eq-btn-label">Tentu</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\lim_{x \\to 0} f(x)$')" title="Limit x mendekati 0">
+                  <span class="ms-eq-btn-symbol">lim<sub>x&rarr;0</sub></span>
+                  <span class="ms-eq-btn-label">Limit 0</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\lim_{x \\to \\infty} f(x)$')" title="Limit x mendekati tak hingga">
+                  <span class="ms-eq-btn-symbol">lim<sub>x&rarr;&infin;</sub></span>
+                  <span class="ms-eq-btn-label">Limit &infin;</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title">Kalkulus & Sigma</div>
+            </div>
+
+            <!-- Group: Fungsi & Log -->
+            <div class="ms-eq-group">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\log_{b}(x)$')" title="Logaritma Basis b">
+                  <span class="ms-eq-btn-symbol"><sup>b</sup>log x</span>
+                  <span class="ms-eq-btn-label">Logaritma</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\ln(x)$')" title="Logaritma Natural">
+                  <span class="ms-eq-btn-symbol">ln x</span>
+                  <span class="ms-eq-btn-label">Log Alami</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\sin(x)$')" title="Sinus">
+                  <span class="ms-eq-btn-symbol">sin x</span>
+                  <span class="ms-eq-btn-label">Sinus</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\cos(x)$')" title="Cosinus">
+                  <span class="ms-eq-btn-symbol">cos x</span>
+                  <span class="ms-eq-btn-label">Cosinus</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\tan(x)$')" title="Tangen">
+                  <span class="ms-eq-btn-symbol">tan x</span>
+                  <span class="ms-eq-btn-label">Tangen</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title">Fungsi & Log</div>
+            </div>
+
+            <!-- Group: Aksen & Vektor -->
+            <div class="ms-eq-group">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\vec{v}$')" title="Vektor Panah">
+                  <span class="ms-eq-btn-symbol">v&#8407;</span>
+                  <span class="ms-eq-btn-label">Vektor</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\overline{AB}$')" title="Ruas Garis AB">
+                  <span class="ms-eq-btn-symbol" style="text-decoration: overline;">AB</span>
+                  <span class="ms-eq-btn-label">Ruas Garis</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\bar{x}$')" title="Rata-rata (X-bar)">
+                  <span class="ms-eq-btn-symbol" style="text-decoration: overline;">x</span>
+                  <span class="ms-eq-btn-label">Rata-rata</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title">Vektor & Aksen</div>
+            </div>
+
+            <!-- Group: Matriks -->
+            <div class="ms-eq-group">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$')" title="Matriks 2x2">
+                  <span class="ms-eq-btn-symbol">( 2x2 )</span>
+                  <span class="ms-eq-btn-label">Matriks 2x2</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}$')" title="Determinan 2x2">
+                  <span class="ms-eq-btn-symbol">| 2x2 |</span>
+                  <span class="ms-eq-btn-label">Determinan</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="insertEquation('$\\begin{pmatrix} x \\\\ y \\end{pmatrix}$')" title="Vektor Kolom 2D">
+                  <span class="ms-eq-btn-symbol">( Kolom )</span>
+                  <span class="ms-eq-btn-label">Vektor Kolom</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title">Matriks</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Tab 2: Simbol & Operator -->
+        <div id="tab-symbols" class="tab-pane-content" style="display: none;">
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            
+            <!-- Category: Operator & Perbandingan -->
+            <div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary-700); text-transform: uppercase; margin-bottom: 0.4rem;">
+                <i class="fas fa-plus-minus"></i> Operator & Perbandingan
+              </div>
+              <div class="ms-eq-sym-grid">
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\pm$')" title="Plus-Minus">&plusmn;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\mp$')" title="Minus-Plus">&#8723;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\times$')" title="Kali">&times;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\div$')" title="Bagi">&divide;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\cdot$')" title="Titik Kali">&sdot;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$=$')" title="Sama Dengan">=</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\ne$')" title="Tidak Sama Dengan">&ne;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$<$')" title="Kurang Dari">&lt;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$>$')" title="Lebih Dari">&gt;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\le$')" title="Kurang Dari Sama Dengan">&le;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\ge$')" title="Lebih Dari Sama Dengan">&ge;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\approx$')" title="Mendekati / Kira-kira">&approx;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\equiv$')" title="Ekuivalen / Identik">&equiv;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\propto$')" title="Sebanding / Proporsional">&prop;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\infty$')" title="Tak Hingga">&infin;</button>
+              </div>
+            </div>
+
+            <!-- Category: Derajat, Geometri & Satuan -->
+            <div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary-700); text-transform: uppercase; margin-bottom: 0.4rem;">
+                <i class="fas fa-shapes"></i> Derajat, Geometri & Satuan
+              </div>
+              <div class="ms-eq-sym-grid">
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$^\\circ$')" title="Derajat (misal 90&deg;)">90&deg;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$^\\circ\\text{C}$')" title="Derajat Celsius">&deg;C</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\angle$')" title="Sudut">&#8736;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\perp$')" title="Tegak Lurus">&#8869;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\parallel$')" title="Sejajar">&#8741;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\triangle$')" title="Segitiga">&#9651;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\pi$')" title="Pi (3.14)">&pi;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\% $')" title="Persen">%</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\text{ permil}$')" title="Permil">&permil;</button>
+              </div>
+            </div>
+
+            <!-- Category: Huruf Yunani (Greek) -->
+            <div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary-700); text-transform: uppercase; margin-bottom: 0.4rem;">
+                <i class="fas fa-font"></i> Huruf Yunani (Greek Letters)
+              </div>
+              <div class="ms-eq-sym-grid">
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\alpha$')" title="Alpha">&alpha;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\beta$')" title="Beta">&beta;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\gamma$')" title="Gamma">&gamma;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\delta$')" title="Delta">&delta;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\epsilon$')" title="Epsilon">&epsilon;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\theta$')" title="Theta (Sudut)">&theta;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\lambda$')" title="Lambda (Panjang Gelombang)">&lambda;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\mu$')" title="Mu (Massa jenis/Mikro)">&mu;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\rho$')" title="Rho (Massa Jenis)">&rho;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\sigma$')" title="Sigma (Simpangan Baku)">&sigma;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\tau$')" title="Tau (Torsi)">&tau;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\phi$')" title="Phi">&phi;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\omega$')" title="Omega (Kecepatan Sudut)">&omega;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\Delta$')" title="Delta Kapital (Perubahan)">&Delta;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\Sigma$')" title="Sigma Kapital">&Sigma;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\Omega$')" title="Omega Kapital (Ohm)">&Omega;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\Theta$')" title="Theta Kapital">&Theta;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\Phi$')" title="Phi Kapital">&Phi;</button>
+              </div>
+            </div>
+
+            <!-- Category: Himpunan, Logika & Panah -->
+            <div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary-700); text-transform: uppercase; margin-bottom: 0.4rem;">
+                <i class="fas fa-arrows-split-up-and-left"></i> Himpunan, Logika & Panah
+              </div>
+              <div class="ms-eq-sym-grid">
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\in$')" title="Elemen Dari">&#8712;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\notin$')" title="Bukan Elemen Dari">&#8713;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\subset$')" title="Himpunan Bagian">&#8834;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\subseteq$')" title="Himpunan Bagian Sama">&#8838;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\cup$')" title="Gabungan (Union)">&#8746;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\cap$')" title="Irisan (Intersect)">&#8745;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\emptyset$')" title="Himpunan Kosong">&#8709;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\forall$')" title="Untuk Semua (Universal)">&#8704;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\exists$')" title="Ada / Terdapat">&#8707;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\neg$')" title="Negasi">&#172;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\rightarrow$')" title="Panah Kanan">&rarr;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\leftarrow$')" title="Panah Kiri">&larr;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\leftrightarrow$')" title="Panah Bolak-balik">&harr;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\Rightarrow$')" title="Implikasi (Maka)">&rArr;</button>
+                <button type="button" class="ms-eq-sym-btn" onclick="insertEquation('$\\iff$')" title="Biimplikasi (Jika dan hanya jika)">&hArr;</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Tab 3: Asisten Pembuat Rumus Interaktif -->
+        <div id="tab-assistant" class="tab-pane-content" style="display: none;">
+          <div style="background: var(--light-50); border: 1px solid var(--light-200); border-radius: 8px; padding: 1.25rem;">
+            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+              <label class="form-label" style="margin-bottom: 0; font-weight: 700;">Pilih Format Rumus:</label>
+              <select id="assistant-type" class="form-control" style="width: auto; min-width: 220px;" onchange="updateAssistantFields()">
+                <option value="fraction">Pecahan (Pembilang / Penyebut)</option>
+                <option value="power">Pangkat / Eksponen (x^n)</option>
+                <option value="subscript">Subskrip / Indeks (x_n)</option>
+                <option value="power_sub">Pangkat & Indeks Sekaligus</option>
+                <option value="root">Akar (Akar Kuadrat / Akar Pangkat n)</option>
+                <option value="log">Logaritma (^b log x)</option>
+                <option value="matrix2x2">Matriks 2 x 2</option>
+                <option value="custom">Uji Rumus Bebas (Freeform LaTeX)</option>
+              </select>
+            </div>
+
+            <!-- Dynamic Input Fields by Formula Type -->
+            <div id="assistant-inputs" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+              <!-- Populated by JS -->
+            </div>
+
+            <!-- Assistant Live MathJax Preview -->
+            <div style="margin-bottom: 1rem; background: white; border: 1px solid var(--primary-200); border-radius: 8px; padding: 1rem;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--primary-700); text-transform: uppercase; display: block; margin-bottom: 0.25rem;">
+                Pratinjau Hasil Rumus:
+              </span>
+              <div id="assistant-preview" style="font-size: 1.35rem; min-height: 40px; display: flex; align-items: center; justify-content: center; color: var(--text-main);">
+                $rac{a}{b}$
+              </div>
+              <div id="assistant-raw-code" style="font-size: 0.8rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; text-align: center; margin-top: 0.4rem;">
+                $rac{a}{b}$
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+              <button type="button" class="btn btn-primary" onclick="insertFromAssistant()">
+                <i class="fas fa-arrow-down"></i> Sisipkan Rumus Ini ke Target
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Contoh & Panduan -->
+        <div id="tab-examples" class="tab-pane-content" style="display: none;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.85rem;">
+            
+            <div style="background: white; border: 1px solid var(--light-200); border-radius: 8px; padding: 0.85rem;">
+              <b style="font-size: 0.85rem; color: var(--primary-800); display: block;">Rumus Kuadrat ABC</b>
+              <div style="margin: 0.4rem 0; font-size: 1rem; text-align: center;">$x = rac{-b \pm \sqrt{b^2 - 4ac}}{2a}$</div>
+              <button type="button" class="btn btn-sm btn-secondary" style="width: 100%; font-size: 0.75rem;" onclick="insertEquation('$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$')">
+                <i class="fas fa-plus"></i> Sisipkan Rumus ABC
+              </button>
+            </div>
+
+            <div style="background: white; border: 1px solid var(--light-200); border-radius: 8px; padding: 0.85rem;">
+              <b style="font-size: 0.85rem; color: var(--primary-800); display: block;">Barisan & Deret Geometri</b>
+              <div style="margin: 0.4rem 0; font-size: 1rem; text-align: center;">$U_n = a \cdot r^{n-1}$</div>
+              <button type="button" class="btn btn-sm btn-secondary" style="width: 100%; font-size: 0.75rem;" onclick="insertEquation('$U_n = a \\cdot r^{n-1}$')">
+                <i class="fas fa-plus"></i> Sisipkan Rumus Un Geometri
+              </button>
+            </div>
+
+            <div style="background: white; border: 1px solid var(--light-200); border-radius: 8px; padding: 0.85rem;">
+              <b style="font-size: 0.85rem; color: var(--primary-800); display: block;">Fisika: Gerak Lurus (GLBB)</b>
+              <div style="margin: 0.4rem 0; font-size: 1rem; text-align: center;">$v_t^2 = v_0^2 + 2as$</div>
+              <button type="button" class="btn btn-sm btn-secondary" style="width: 100%; font-size: 0.75rem;" onclick="insertEquation('$v_t^2 = v_0^2 + 2as$')">
+                <i class="fas fa-plus"></i> Sisipkan Rumus GLBB
+              </button>
+            </div>
+
+            <div style="background: white; border: 1px solid var(--light-200); border-radius: 8px; padding: 0.85rem;">
+              <b style="font-size: 0.85rem; color: var(--primary-800); display: block;">Fisika: Energi Kinetik</b>
+              <div style="margin: 0.4rem 0; font-size: 1rem; text-align: center;">$E_k = rac{1}{2}mv^2$</div>
+              <button type="button" class="btn btn-sm btn-secondary" style="width: 100%; font-size: 0.75rem;" onclick="insertEquation('$E_k = \\frac{1}{2}mv^2$')">
+                <i class="fas fa-plus"></i> Sisipkan Energi Kinetik
+              </button>
+            </div>
+
+            <div style="background: white; border: 1px solid var(--light-200); border-radius: 8px; padding: 0.85rem;">
+              <b style="font-size: 0.85rem; color: var(--primary-800); display: block;">Suhu & Derajat Celsius</b>
+              <div style="margin: 0.4rem 0; font-size: 1rem; text-align: center;">$T = 100^\circ	ext{C}$</div>
+              <button type="button" class="btn btn-sm btn-secondary" style="width: 100%; font-size: 0.75rem;" onclick="insertEquation('$100^\\circ\\text{C}$')">
+                <i class="fas fa-plus"></i> Sisipkan Derajat Suhu
+              </button>
+            </div>
+
+            <div style="background: white; border: 1px solid var(--light-200); border-radius: 8px; padding: 0.85rem;">
+              <b style="font-size: 0.85rem; color: var(--primary-800); display: block;">Kimia: Reaksi / Senyawa</b>
+              <div style="margin: 0.4rem 0; font-size: 1rem; text-align: center;">$2	ext{H}_2 + 	ext{O}_2 ightarrow 2	ext{H}_2	ext{O}$</div>
+              <button type="button" class="btn btn-sm btn-secondary" style="width: 100%; font-size: 0.75rem;" onclick="insertEquation('$2\\text{H}_2 + \\text{O}_2 \\rightarrow 2\\text{H}_2\\text{O}$')">
+                <i class="fas fa-plus"></i> Sisipkan Senyawa H2O
+              </button>
+            </div>
+
+          </div>
+
+          <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--primary-50); border-radius: 6px; font-size: 0.825rem; color: var(--primary-900);">
+            <i class="fas fa-lightbulb" style="color: #f59e0b;"></i> <b>Tips Menulis Formula Bebas:</b>
+            Cukup apit formula Anda dengan tanda dollar <code>$</code> untuk rumus sejajar teks (misal: <code>$2x^2 + 5$</code>), atau tanda ganda <code>$$</code> untuk rumus di baris tersendiri.
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- END EQUATION RIBBON -->
+
+    <!-- Question Text Field -->
     <div class="form-group">
-      <label class="form-label" for="question_text">Teks Butir Soal <span style="color: var(--danger-500);">*</span></label>
-      <textarea id="question_text" name="question_text" class="form-control" rows="5" placeholder="Tuliskan pertanyaan soal secara lengkap di sini..." required>{{ question.question_text if question else '' }}</textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+        <label class="form-label" for="question_text" style="margin-bottom: 0; font-weight: 700;">
+          Teks Butir Soal <span style="color: var(--danger-500);">*</span>
+        </label>
+        <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('question_text')">
+          <i class="fas fa-square-root-alt"></i> Buka Equation
+        </button>
+      </div>
+      <textarea id="question_text" name="question_text" class="form-control" rows="5" placeholder="Tuliskan pertanyaan soal secara lengkap di sini... (Gunakan toolbar Equation di atas untuk menyisipkan rumus)" required oninput="triggerLivePreview()" onfocus="setTargetField('question_text')">{{ question.question_text if question else '' }}</textarea>
     </div>
 
     <div class="form-group">
@@ -112,14 +590,14 @@
     </div>
 
     <!-- Section 3: Options & Answers Builder -->
-    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.5rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.75rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
       <i class="fas fa-check-double"></i> 3. Opsi Pilihan & Kunci Jawaban
     </h3>
 
     <!-- Builder 1: Pilihan Ganda Tunggal (A-E) -->
     <div id="section-builder-pg">
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-        Isi teks pilihan jawaban A s/d E, lalu pilih <b>satu radio button</b> yang merupakan kunci jawaban benar.
+        Isi teks pilihan jawaban A s/d E, lalu pilih <b>satu radio button</b> yang merupakan kunci jawaban benar. Klik <b>+Rumus</b> untuk menyisipkan pecahan/pangkat ke opsi tersebut.
       </p>
 
       {% set pg_opts = question.options if question and question.question_type == 'pg' else [] %}
@@ -130,13 +608,16 @@
       {% set correct_pg = question.correct_answer if question and question.question_type == 'pg' else 'A' %}
 
       {% for k in ['A', 'B', 'C', 'D', 'E'] %}
-      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
         <label style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: var(--primary-100); color: var(--primary-800); font-weight: 700; border-radius: 50%; flex-shrink: 0;">
           {{ k }}
         </label>
-        <input type="text" name="opt_text_{{ k }}" class="form-control" placeholder="Teks opsi {{ k }}" value="{{ pg_opt_dict.get(k, '') }}">
+        <input type="text" id="opt_text_{{ k }}" name="opt_text_{{ k }}" class="form-control" placeholder="Teks opsi {{ k }}" value="{{ pg_opt_dict.get(k, '') }}" style="flex: 1; min-width: 200px;" oninput="triggerLivePreview()" onfocus="setTargetField('opt_text_{{ k }}')">
+        <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('opt_text_{{ k }}')" title="Tulis rumus/simbol untuk Opsi {{ k }}">
+          <i class="fas fa-square-root-alt"></i> +Rumus
+        </button>
         <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; flex-shrink: 0; padding: 0.5rem 0.75rem; background: var(--light-100); border-radius: var(--radius-sm);">
-          <input type="radio" name="correct_pg" value="{{ k }}" {% if correct_pg == k %}checked{% endif %}>
+          <input type="radio" name="correct_pg" value="{{ k }}" {% if correct_pg == k %}checked{% endif %} onchange="triggerLivePreview()">
           Kunci Benar
         </label>
       </div>
@@ -157,13 +638,16 @@
       {% set correct_k = question.correct_answer if question and question.question_type == 'pg_kompleks' else [] %}
 
       {% for k in ['A', 'B', 'C', 'D', 'E'] %}
-      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
         <label style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: var(--warning-100); color: var(--warning-800); font-weight: 700; border-radius: 50%; flex-shrink: 0;">
           {{ k }}
         </label>
-        <input type="text" name="opt_kompleks_text_{{ k }}" class="form-control" placeholder="Pernyataan {{ k }}" value="{{ k_opt_dict.get(k, '') }}">
+        <input type="text" id="opt_kompleks_text_{{ k }}" name="opt_kompleks_text_{{ k }}" class="form-control" placeholder="Pernyataan {{ k }}" value="{{ k_opt_dict.get(k, '') }}" style="flex: 1; min-width: 200px;" oninput="triggerLivePreview()" onfocus="setTargetField('opt_kompleks_text_{{ k }}')">
+        <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('opt_kompleks_text_{{ k }}')" title="Tulis rumus/simbol untuk Pernyataan {{ k }}">
+          <i class="fas fa-square-root-alt"></i> +Rumus
+        </button>
         <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; flex-shrink: 0; padding: 0.5rem 0.75rem; background: var(--light-100); border-radius: var(--radius-sm);">
-          <input type="checkbox" name="correct_kompleks" value="{{ k }}" {% if k in correct_k %}checked{% endif %}>
+          <input type="checkbox" name="correct_kompleks" value="{{ k }}" {% if k in correct_k %}checked{% endif %} onchange="triggerLivePreview()">
           Benar
         </label>
       </div>
@@ -185,18 +669,30 @@
 
       <div class="form-group">
         <label class="form-label">Kunci Jawaban yang Diterima (Variasi dipisah koma)</label>
-        <input type="text" name="isian_answers" class="form-control" placeholder="Contoh: 144 atau fotosintesis" value="{{ isian_str }}">
+        <div style="display: flex; gap: 0.75rem;">
+          <input type="text" id="isian_answers" name="isian_answers" class="form-control" placeholder="Contoh: 144 atau fotosintesis" value="{{ isian_str }}" oninput="triggerLivePreview()" onfocus="setTargetField('isian_answers')">
+          <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('isian_answers')" title="Tulis rumus untuk Kunci Isian">
+            <i class="fas fa-square-root-alt"></i> +Rumus
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Section 4: Pembahasan / Solusi Lengkap -->
-    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.5rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 1.75rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
       <i class="fas fa-lightbulb"></i> 4. Pembahasan & Solusi Lengkap
     </h3>
 
     <div class="form-group">
-      <label class="form-label" for="explanation_text">Teks Pembahasan / Langkah Penyelesaian</label>
-      <textarea id="explanation_text" name="explanation_text" class="form-control" rows="4" placeholder="Tuliskan analisis, langkah pengerjaan, atau rumus penyelesaian...">{{ question.explanation_text if question else '' }}</textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+        <label class="form-label" for="explanation_text" style="margin-bottom: 0; font-weight: 700;">
+          Teks Pembahasan / Langkah Penyelesaian
+        </label>
+        <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('explanation_text')">
+          <i class="fas fa-square-root-alt"></i> Buka Equation
+        </button>
+      </div>
+      <textarea id="explanation_text" name="explanation_text" class="form-control" rows="4" placeholder="Tuliskan analisis, langkah pengerjaan, atau rumus penyelesaian lengkap..." oninput="triggerLivePreview()" onfocus="setTargetField('explanation_text')">{{ question.explanation_text if question else '' }}</textarea>
     </div>
 
     <div class="form-group">
@@ -210,6 +706,54 @@
       {% endif %}
     </div>
 
+    <!-- =================================================================== -->
+    <!-- LIVE INTERACTIVE MATHJAX PREVIEW BOX -->
+    <!-- =================================================================== -->
+    <div style="margin-top: 2rem; border: 1px solid var(--primary-200); border-radius: 10px; background: #f0fdfa; overflow: hidden;">
+      <div style="background: var(--primary-100); padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--primary-200);">
+        <div style="font-weight: 800; font-size: 0.95rem; color: var(--primary-900); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-eye" style="color: var(--primary-700);"></i>
+          <span>Pratinjau Nyata CBT (Live MathJax Preview)</span>
+        </div>
+        <span style="font-size: 0.75rem; background: var(--primary-600); color: white; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+          Auto-Rendering
+        </span>
+      </div>
+
+      <div style="padding: 1.25rem;">
+        <!-- Live Question Text -->
+        <div style="margin-bottom: 1rem;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary-800); text-transform: uppercase; margin-bottom: 0.35rem;">
+            Tampilan Teks Soal:
+          </div>
+          <div id="live-preview-question" class="ms-live-preview-box" style="white-space: pre-line;">
+            <i>Teks soal akan otomatis ter-render di sini secara real-time...</i>
+          </div>
+        </div>
+
+        <!-- Live Options Preview -->
+        <div style="margin-bottom: 1rem;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary-800); text-transform: uppercase; margin-bottom: 0.35rem;">
+            Tampilan Opsi Pilihan:
+          </div>
+          <div id="live-preview-options" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Live Explanation Preview -->
+        <div>
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary-800); text-transform: uppercase; margin-bottom: 0.35rem;">
+            Tampilan Pembahasan:
+          </div>
+          <div id="live-preview-explanation" class="ms-live-preview-box" style="white-space: pre-line; background: #ffffff;">
+            <i>Teks pembahasan akan otomatis ter-render di sini...</i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Buttons -->
     <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
       <a href="{{ url_for('supervisor.questions') }}" class="btn btn-secondary">Batal</a>
       <button type="submit" id="btn-submit-question" class="btn btn-primary btn-lg">
@@ -220,6 +764,368 @@
 </div>
 
 <script>
+// =========================================================================
+// EQUATION RIBBON & REAL-TIME MATH CONTROLLER
+// =========================================================================
+
+let activeTargetId = 'question_text';
+
+function setTargetField(fieldId) {
+  activeTargetId = fieldId;
+  const select = document.getElementById('eq-target-select');
+  if (select && select.value !== fieldId) {
+    select.value = fieldId;
+  }
+}
+
+function activateEquationTarget(fieldId) {
+  setTargetField(fieldId);
+  const targetElem = document.getElementById(fieldId);
+  if (targetElem) {
+    targetElem.focus();
+  }
+  // Scroll toolbar into view gently if needed
+  const ribbon = document.getElementById('ms-equation-ribbon');
+  if (ribbon) {
+    const rect = ribbon.getBoundingClientRect();
+    if (rect.top < 0 || rect.bottom > window.innerHeight) {
+      ribbon.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+}
+
+function toggleRibbonCollapse() {
+  const body = document.getElementById('ms-eq-ribbon-body');
+  const tabs = document.getElementById('ms-eq-tabs-bar');
+  const icon = document.getElementById('ribbon-toggle-icon');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    tabs.style.display = 'flex';
+    icon.className = 'fas fa-chevron-up';
+  } else {
+    body.style.display = 'none';
+    tabs.style.display = 'none';
+    icon.className = 'fas fa-chevron-down';
+  }
+}
+
+function switchEqTab(tabId) {
+  // Update tab buttons
+  document.querySelectorAll('.ms-eq-tab').forEach(btn => btn.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  // Update tab content
+  document.querySelectorAll('.tab-pane-content').forEach(pane => pane.style.display = 'none');
+  const targetPane = document.getElementById(tabId);
+  if (targetPane) {
+    targetPane.style.display = 'block';
+  }
+
+  // If switching to assistant, render preview
+  if (tabId === 'tab-assistant') {
+    updateAssistantPreview();
+  }
+  
+  // Re-typeset MathJax in tabs if needed
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise([targetPane]).catch(() => {});
+  }
+}
+
+// Smart Equation Inserter into Active Target Field
+function insertEquation(latexSnippet) {
+  const target = document.getElementById(activeTargetId);
+  if (!target) return;
+
+  const start = target.selectionStart || 0;
+  const end = target.selectionEnd || 0;
+  const selectedText = target.value.substring(start, end);
+  const val = target.value;
+
+  // Check if cursor is already inside math delimiters $ ... $
+  const textBefore = val.substring(0, start);
+  const textAfter = val.substring(end);
+  const dollarCountBefore = (textBefore.match(/(?<!\\)\$/g) || []).length;
+  const isInsideMath = (dollarCountBefore % 2 === 1);
+
+  let snippet = latexSnippet;
+
+  // If text was highlighted/selected, integrate it intelligently
+  if (selectedText) {
+    if (snippet.includes('{a}')) {
+      snippet = snippet.replace('{a}', '{' + selectedText + '}');
+    } else if (snippet.includes('{x}')) {
+      snippet = snippet.replace('{x}', '{' + selectedText + '}');
+    } else if (snippet.includes('x')) {
+      snippet = snippet.replace('x', selectedText);
+    }
+  }
+
+  // If already inside $...$, strip the outer $
+  if (isInsideMath) {
+    snippet = snippet.replace(/^\$/, '').replace(/\$$/, '');
+  }
+
+  // Insert snippet
+  target.value = textBefore + snippet + textAfter;
+
+  // Position cursor right inside the placeholder
+  const newPos = start + snippet.length;
+  target.focus();
+  target.setSelectionRange(newPos, newPos);
+
+  // Trigger preview update
+  triggerLivePreview();
+}
+
+// Assistant Dynamic Fields Definition
+function updateAssistantFields() {
+  const type = document.getElementById('assistant-type').value;
+  const container = document.getElementById('assistant-inputs');
+  container.innerHTML = '';
+
+  if (type === 'fraction') {
+    container.innerHTML = `
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Pembilang (Atas):</label>
+        <input type="text" id="asst_num" class="form-control" placeholder="Misal: 2x + 1" value="a" oninput="updateAssistantPreview()">
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Penyebut (Bawah):</label>
+        <input type="text" id="asst_den" class="form-control" placeholder="Misal: 5" value="b" oninput="updateAssistantPreview()">
+      </div>
+    `;
+  } else if (type === 'power') {
+    container.innerHTML = `
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Basis Pokok:</label>
+        <input type="text" id="asst_base" class="form-control" placeholder="Misal: x atau (a+b)" value="x" oninput="updateAssistantPreview()">
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Pangkat (Eksponen):</label>
+        <input type="text" id="asst_exp" class="form-control" placeholder="Misal: 2 atau n-1" value="2" oninput="updateAssistantPreview()">
+      </div>
+    `;
+  } else if (type === 'subscript') {
+    container.innerHTML = `
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Variabel / Basis:</label>
+        <input type="text" id="asst_base" class="form-control" placeholder="Misal: x atau U" value="x" oninput="updateAssistantPreview()">
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Indeks (Subskrip):</label>
+        <input type="text" id="asst_sub" class="form-control" placeholder="Misal: 1 atau n" value="1" oninput="updateAssistantPreview()">
+      </div>
+    `;
+  } else if (type === 'power_sub') {
+    container.innerHTML = `
+      <div style="flex: 1; min-width: 120px;">
+        <label class="form-label" style="font-size: 0.8rem;">Basis:</label>
+        <input type="text" id="asst_base" class="form-control" value="x" oninput="updateAssistantPreview()">
+      </div>
+      <div style="flex: 1; min-width: 120px;">
+        <label class="form-label" style="font-size: 0.8rem;">Indeks Bawah:</label>
+        <input type="text" id="asst_sub" class="form-control" value="i" oninput="updateAssistantPreview()">
+      </div>
+      <div style="flex: 1; min-width: 120px;">
+        <label class="form-label" style="font-size: 0.8rem;">Pangkat Atas:</label>
+        <input type="text" id="asst_exp" class="form-control" value="2" oninput="updateAssistantPreview()">
+      </div>
+    `;
+  } else if (type === 'root') {
+    container.innerHTML = `
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Bilangan dalam Akar:</label>
+        <input type="text" id="asst_radicand" class="form-control" placeholder="Misal: 16 atau b^2 - 4ac" value="x" oninput="updateAssistantPreview()">
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Derajat Akar (Opsional):</label>
+        <input type="text" id="asst_degree" class="form-control" placeholder="Kosongkan jika akar kuadrat (&radic;)" value="" oninput="updateAssistantPreview()">
+      </div>
+    `;
+  } else if (type === 'log') {
+    container.innerHTML = `
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Basis Logaritma (Opsional):</label>
+        <input type="text" id="asst_log_base" class="form-control" placeholder="Misal: 2 atau a" value="2" oninput="updateAssistantPreview()">
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <label class="form-label" style="font-size: 0.8rem;">Numerus (Nilai yang di-log):</label>
+        <input type="text" id="asst_log_num" class="form-control" placeholder="Misal: 8 atau (x + 1)" value="8" oninput="updateAssistantPreview()">
+      </div>
+    `;
+  } else if (type === 'matrix2x2') {
+    container.innerHTML = `
+      <div style="width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; max-width: 320px;">
+        <input type="text" id="m_11" class="form-control" placeholder="Baris 1 Kolom 1" value="a" oninput="updateAssistantPreview()">
+        <input type="text" id="m_12" class="form-control" placeholder="Baris 1 Kolom 2" value="b" oninput="updateAssistantPreview()">
+        <input type="text" id="m_21" class="form-control" placeholder="Baris 2 Kolom 1" value="c" oninput="updateAssistantPreview()">
+        <input type="text" id="m_22" class="form-control" placeholder="Baris 2 Kolom 2" value="d" oninput="updateAssistantPreview()">
+      </div>
+    `;
+  } else if (type === 'custom') {
+    container.innerHTML = `
+      <div style="width: 100%;">
+        <label class="form-label" style="font-size: 0.8rem;">Ketik Kode LaTeX Formula:</label>
+        <input type="text" id="asst_custom" class="form-control" placeholder="Misal: \\int_{0}^{1} x^2 dx = \\frac{1}{3}" value="\\frac{a+b}{c-d} = \\sqrt{k}" oninput="updateAssistantPreview()">
+      </div>
+    `;
+  }
+
+  updateAssistantPreview();
+}
+
+function getAssistantFormula() {
+  const type = document.getElementById('assistant-type').value;
+  let code = '';
+
+  if (type === 'fraction') {
+    const num = document.getElementById('asst_num')?.value.trim() || 'a';
+    const den = document.getElementById('asst_den')?.value.trim() || 'b';
+    code = `\\frac{${num}}{${den}}`;
+  } else if (type === 'power') {
+    const base = document.getElementById('asst_base')?.value.trim() || 'x';
+    const exp = document.getElementById('asst_exp')?.value.trim() || '2';
+    code = `${base}^{${exp}}`;
+  } else if (type === 'subscript') {
+    const base = document.getElementById('asst_base')?.value.trim() || 'x';
+    const sub = document.getElementById('asst_sub')?.value.trim() || '1';
+    code = `${base}_{${sub}}`;
+  } else if (type === 'power_sub') {
+    const base = document.getElementById('asst_base')?.value.trim() || 'x';
+    const sub = document.getElementById('asst_sub')?.value.trim() || 'i';
+    const exp = document.getElementById('asst_exp')?.value.trim() || '2';
+    code = `${base}_{${sub}}^{${exp}}`;
+  } else if (type === 'root') {
+    const rad = document.getElementById('asst_radicand')?.value.trim() || 'x';
+    const deg = document.getElementById('asst_degree')?.value.trim();
+    if (deg) {
+      code = `\\sqrt[${deg}]{${rad}}`;
+    } else {
+      code = `\\sqrt{${rad}}`;
+    }
+  } else if (type === 'log') {
+    const base = document.getElementById('asst_log_base')?.value.trim();
+    const num = document.getElementById('asst_log_num')?.value.trim() || 'x';
+    if (base) {
+      code = `\\log_{${base}}(${num})`;
+    } else {
+      code = `\\log(${num})`;
+    }
+  } else if (type === 'matrix2x2') {
+    const a = document.getElementById('m_11')?.value.trim() || 'a';
+    const b = document.getElementById('m_12')?.value.trim() || 'b';
+    const c = document.getElementById('m_21')?.value.trim() || 'c';
+    const d = document.getElementById('m_22')?.value.trim() || 'd';
+    code = `\\begin{pmatrix} ${a} & ${b} \\\\ ${c} & ${d} \\end{pmatrix}`;
+  } else if (type === 'custom') {
+    code = document.getElementById('asst_custom')?.value.trim() || 'x';
+  }
+
+  return `$${code}$`;
+}
+
+function updateAssistantPreview() {
+  const formula = getAssistantFormula();
+  const previewDiv = document.getElementById('assistant-preview');
+  const rawCodeDiv = document.getElementById('assistant-raw-code');
+
+  if (previewDiv) previewDiv.innerHTML = formula;
+  if (rawCodeDiv) rawCodeDiv.textContent = formula;
+
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise([previewDiv]).catch(() => {});
+  }
+}
+
+function insertFromAssistant() {
+  const formula = getAssistantFormula();
+  insertEquation(formula);
+}
+
+// =========================================================================
+// REAL-TIME MATHJAX LIVE PREVIEW CONTROLLER
+// =========================================================================
+let livePreviewTimer = null;
+
+function triggerLivePreview() {
+  clearTimeout(livePreviewTimer);
+  livePreviewTimer = setTimeout(renderLivePreview, 150);
+}
+
+function renderLivePreview() {
+  // 1. Question Text
+  const qText = document.getElementById('question_text')?.value.trim() || '<i>(Teks butir soal kosong)</i>';
+  const qPreview = document.getElementById('live-preview-question');
+  if (qPreview) qPreview.innerHTML = qText;
+
+  // 2. Options Preview
+  const selectedType = document.querySelector('input[name="question_type"]:checked')?.value || 'pg';
+  const optContainer = document.getElementById('live-preview-options');
+  
+  if (optContainer) {
+    optContainer.innerHTML = '';
+
+    if (selectedType === 'pg') {
+      const correctVal = document.querySelector('input[name="correct_pg"]:checked')?.value || 'A';
+      ['A', 'B', 'C', 'D', 'E'].forEach(k => {
+        const textVal = document.getElementById(`opt_text_${k}`)?.value.trim() || `(Pilihan ${k})`;
+        const isCorrect = (correctVal === k);
+        const item = document.createElement('div');
+        item.style.cssText = `display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.85rem; border-radius: 6px; border: 1px solid ${isCorrect ? 'var(--primary-500)' : 'var(--light-200)'}; background: ${isCorrect ? 'var(--primary-50)' : '#ffffff'};`;
+        item.innerHTML = `
+          <div style="width: 26px; height: 26px; border-radius: 50%; background: ${isCorrect ? 'var(--primary-600)' : 'var(--light-200)'}; color: ${isCorrect ? '#ffffff' : 'var(--text-main)'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0;">
+            ${k}
+          </div>
+          <div style="flex: 1; font-size: 0.95rem;">${textVal}</div>
+          ${isCorrect ? '<span class="badge badge-success" style="font-size: 0.7rem;"><i class="fas fa-check"></i> Kunci</span>' : ''}
+        `;
+        optContainer.appendChild(item);
+      });
+    } else if (selectedType === 'pg_kompleks') {
+      ['A', 'B', 'C', 'D', 'E'].forEach(k => {
+        const textVal = document.getElementById(`opt_kompleks_text_${k}`)?.value.trim() || `(Pernyataan ${k})`;
+        const isChecked = document.querySelector(`input[name="correct_kompleks"][value="${k}"]`)?.checked;
+        const item = document.createElement('div');
+        item.style.cssText = `display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.85rem; border-radius: 6px; border: 1px solid ${isChecked ? 'var(--warning-500)' : 'var(--light-200)'}; background: ${isChecked ? 'var(--warning-50)' : '#ffffff'};`;
+        item.innerHTML = `
+          <div style="width: 24px; height: 24px; border-radius: 4px; background: ${isChecked ? 'var(--warning-500)' : 'var(--light-200)'}; color: ${isChecked ? '#ffffff' : 'var(--text-main)'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0;">
+            ${isChecked ? '&check;' : k}
+          </div>
+          <div style="flex: 1; font-size: 0.95rem;">${textVal}</div>
+          ${isChecked ? '<span class="badge badge-warning" style="font-size: 0.7rem;">Kunci Benar</span>' : ''}
+        `;
+        optContainer.appendChild(item);
+      });
+    } else if (selectedType === 'isian') {
+      const isianVal = document.getElementById('isian_answers')?.value.trim() || '(Kunci jawaban isian)';
+      const item = document.createElement('div');
+      item.style.cssText = 'padding: 0.75rem 1rem; border: 1px solid var(--light-300); border-radius: 6px; background: white;';
+      item.innerHTML = `
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.2rem;">Kotak Jawaban Singkat Peserta & Kunci:</div>
+        <div style="font-weight: 700; font-size: 1.05rem; color: var(--primary-800);">${isianVal}</div>
+      `;
+      optContainer.appendChild(item);
+    }
+  }
+
+  // 3. Explanation Preview
+  const expText = document.getElementById('explanation_text')?.value.trim() || '<i>(Teks pembahasan belum diisi)</i>';
+  const expPreview = document.getElementById('live-preview-explanation');
+  if (expPreview) expPreview.innerHTML = expText;
+
+  // Typeset all live preview containers with MathJax
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    const previewRoot = document.getElementById('live-preview-question')?.parentElement?.parentElement;
+    if (previewRoot) {
+      window.MathJax.typesetPromise([previewRoot]).catch(() => {});
+    }
+  }
+}
+
+// =========================================================================
+// STANDARD QUESTION FORM CONTROLLER
+// =========================================================================
 document.querySelector('form').addEventListener('submit', function() {
   const btn = document.getElementById('btn-submit-question');
   if (btn) {
@@ -227,10 +1133,12 @@ document.querySelector('form').addEventListener('submit', function() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan ke Bank Soal...';
   }
 });
+
 function switchQuestionType(type) {
   document.getElementById('section-builder-pg').style.display = type === 'pg' ? 'block' : 'none';
   document.getElementById('section-builder-pg-kompleks').style.display = type === 'pg_kompleks' ? 'block' : 'none';
   document.getElementById('section-builder-isian').style.display = type === 'isian' ? 'block' : 'none';
+  triggerLivePreview();
 }
 
 const TOPICS = [
@@ -239,7 +1147,6 @@ const TOPICS = [
 ];
 const NEW_TOPIC = '__new__';
 
-// Opsi dibangun ulang (bukan disembunyikan) agar topik dari subtes lain tidak ikut terpilih/terkirim
 function loadTopicsBySubtest(subtestId) {
   const topicSelect = document.getElementById('topic_id');
   const previous = topicSelect.value || topicSelect.dataset.selected;
@@ -282,6 +1189,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (subtestSelect) {
     loadTopicsBySubtest(subtestSelect.value);
   }
+
+  // Setup Assistant Default
+  updateAssistantFields();
+
+  // Initial Math Typesetting and Live Preview
+  setTimeout(() => {
+    triggerLivePreview();
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise().catch(() => {});
+    }
+  }, 300);
 });
 </script>
 {% endblock %}

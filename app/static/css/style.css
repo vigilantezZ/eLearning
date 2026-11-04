@@ -753,3 +753,237 @@ body.cbt-theme-dark .footer {
   background: var(--dark-950);
   border-top-color: var(--dark-800);
 }
+
+/* ==========================================================================
+   MS Word Style Equation & Symbol Ribbon System
+   ========================================================================== */
+.ms-eq-ribbon {
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.ms-eq-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ms-eq-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--primary-800);
+}
+
+.ms-eq-target-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-300);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: var(--primary-800);
+  font-weight: 700;
+}
+
+.ms-eq-tabs {
+  display: flex;
+  background: #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
+  padding: 0.4rem 0.75rem 0 0.75rem;
+  gap: 0.35rem;
+  overflow-x: auto;
+}
+
+.ms-eq-tab {
+  padding: 0.55rem 1.1rem;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.825rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ms-eq-tab:hover {
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--text-main);
+}
+
+.ms-eq-tab.active {
+  background: #ffffff;
+  color: var(--primary-700);
+  font-weight: 700;
+  border-color: #cbd5e1 #cbd5e1 #ffffff #cbd5e1;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.03);
+}
+
+.ms-eq-body {
+  padding: 1.1rem;
+  background: #ffffff;
+}
+
+.ms-eq-group-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
+.ms-eq-group {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 0.5rem;
+  min-width: 130px;
+}
+
+.ms-eq-group-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  padding-top: 0.4rem;
+  margin-top: auto;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.ms-eq-group-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 0.4rem;
+}
+
+.ms-eq-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 54px;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  font-family: inherit;
+  color: #1e293b;
+}
+
+.ms-eq-btn:hover {
+  background: var(--primary-50);
+  border-color: var(--primary-500);
+  color: var(--primary-700);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(20, 150, 168, 0.15);
+}
+
+.ms-eq-btn:active {
+  transform: translateY(0);
+}
+
+.ms-eq-btn-symbol {
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.ms-eq-btn-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.ms-eq-sym-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 0.4rem;
+}
+
+.ms-eq-sym-btn {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+  font-size: 1.25rem;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #1e293b;
+}
+
+.ms-eq-sym-btn:hover {
+  background: var(--primary-50);
+  border-color: var(--primary-500);
+  color: var(--primary-700);
+  transform: scale(1.1);
+  box-shadow: 0 2px 5px rgba(20, 150, 168, 0.2);
+}
+
+.ms-quick-btn {
+  padding: 0.35rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid var(--primary-300);
+  border-radius: 6px;
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: var(--primary-700);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ms-quick-btn:hover {
+  background: var(--primary-50);
+  border-color: var(--primary-600);
+}
+
+.ms-live-preview-box {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 1.25rem;
+  min-height: 60px;
+  line-height: 1.7;
+  font-size: 1.05rem;
+  color: var(--text-main);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+}
