@@ -153,6 +153,25 @@
         <div id="tab-structures" class="tab-pane-content">
           <div class="ms-eq-group-container">
             
+            <!-- Group: Format Teks (Word) -->
+            <div class="ms-eq-group" style="background: #fdf2f8; border-color: #fbcfe8;">
+              <div class="ms-eq-group-buttons">
+                <button type="button" class="ms-eq-btn" onclick="applyFormat('bold')" title="Tebal (Bold) - Shortcut: Ctrl+B">
+                  <span class="ms-eq-btn-symbol" style="font-weight: 900; font-size: 1.25rem;"><b>B</b></span>
+                  <span class="ms-eq-btn-label">Tebal</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="applyFormat('italic')" title="Miring (Italic) - Shortcut: Ctrl+I">
+                  <span class="ms-eq-btn-symbol" style="font-style: italic; font-size: 1.25rem;"><i>I</i></span>
+                  <span class="ms-eq-btn-label">Miring</span>
+                </button>
+                <button type="button" class="ms-eq-btn" onclick="applyFormat('underline')" title="Garis Bawah (Underline) - Shortcut: Ctrl+U">
+                  <span class="ms-eq-btn-symbol" style="text-decoration: underline; font-weight: 700; font-size: 1.25rem;"><u>U</u></span>
+                  <span class="ms-eq-btn-label">Garis Bwh</span>
+                </button>
+              </div>
+              <div class="ms-eq-group-title" style="color: #9d174d;">Format Teks (Word)</div>
+            </div>
+            
             <!-- Group: Pecahan (Fraction) -->
             <div class="ms-eq-group">
               <div class="ms-eq-group-buttons">
@@ -547,7 +566,8 @@
 
             <div style="background: white; border: 1px solid var(--light-200); border-radius: 8px; padding: 0.85rem;">
               <b style="font-size: 0.85rem; color: var(--primary-800); display: block;">Kimia: Reaksi / Senyawa</b>
-              <div style="margin: 0.4rem 0; font-size: 1rem; text-align: center;">$2	ext{H}_2 + 	ext{O}_2 ightarrow 2	ext{H}_2	ext{O}$</div>
+              <div style="margin: 0.4rem 0; font-size: 1rem; text-align: center;">$2	ext{H}_2 + 	ext{O}_2 
+ightarrow 2	ext{H}_2	ext{O}$</div>
               <button type="button" class="btn btn-sm btn-secondary" style="width: 100%; font-size: 0.75rem;" onclick="insertEquation('$2\\text{H}_2 + \\text{O}_2 \\rightarrow 2\\text{H}_2\\text{O}$')">
                 <i class="fas fa-plus"></i> Sisipkan Senyawa H2O
               </button>
@@ -567,13 +587,18 @@
 
     <!-- Question Text Field -->
     <div class="form-group">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.5rem;">
         <label class="form-label" for="question_text" style="margin-bottom: 0; font-weight: 700;">
           Teks Butir Soal <span style="color: var(--danger-500);">*</span>
         </label>
-        <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('question_text')">
-          <i class="fas fa-square-root-alt"></i> Buka Equation
-        </button>
+        <div style="display: flex; gap: 0.35rem; align-items: center;">
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('bold', 'question_text')" title="Tebal (Ctrl+B)" style="border: 1px solid #cbd5e1; font-weight: 900; padding: 0.25rem 0.55rem; color: #1e293b;"><b>B</b></button>
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('italic', 'question_text')" title="Miring (Ctrl+I)" style="border: 1px solid #cbd5e1; font-style: italic; font-weight: 700; padding: 0.25rem 0.55rem; color: #1e293b;"><i>I</i></button>
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('underline', 'question_text')" title="Garis Bawah (Ctrl+U)" style="border: 1px solid #cbd5e1; text-decoration: underline; font-weight: 700; padding: 0.25rem 0.55rem; color: #1e293b;"><u>U</u></button>
+          <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('question_text')">
+            <i class="fas fa-square-root-alt"></i> Buka Equation
+          </button>
+        </div>
       </div>
       <textarea id="question_text" name="question_text" class="form-control" rows="5" placeholder="Tuliskan pertanyaan soal secara lengkap di sini... (Gunakan toolbar Equation di atas untuk menyisipkan rumus)" required oninput="triggerLivePreview()" onfocus="setTargetField('question_text')">{{ question.question_text if question else '' }}</textarea>
     </div>
@@ -613,9 +638,14 @@
           {{ k }}
         </label>
         <input type="text" id="opt_text_{{ k }}" name="opt_text_{{ k }}" class="form-control" placeholder="Teks opsi {{ k }}" value="{{ pg_opt_dict.get(k, '') }}" style="flex: 1; min-width: 200px;" oninput="triggerLivePreview()" onfocus="setTargetField('opt_text_{{ k }}')">
-        <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('opt_text_{{ k }}')" title="Tulis rumus/simbol untuk Opsi {{ k }}">
-          <i class="fas fa-square-root-alt"></i> +Rumus
-        </button>
+        <div style="display: flex; gap: 0.25rem; align-items: center;">
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('bold', 'opt_text_{{ k }}')" title="Tebal (Ctrl+B)" style="border: 1px solid #cbd5e1; font-weight: 900; padding: 0.25rem 0.5rem; font-size: 0.8rem; line-height: 1.2;">B</button>
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('italic', 'opt_text_{{ k }}')" title="Miring (Ctrl+I)" style="border: 1px solid #cbd5e1; font-style: italic; font-weight: 700; padding: 0.25rem 0.5rem; font-size: 0.8rem; line-height: 1.2;">I</button>
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('underline', 'opt_text_{{ k }}')" title="Garis Bawah (Ctrl+U)" style="border: 1px solid #cbd5e1; text-decoration: underline; font-weight: 700; padding: 0.25rem 0.5rem; font-size: 0.8rem; line-height: 1.2;">U</button>
+          <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('opt_text_{{ k }}')" title="Tulis rumus/simbol untuk Opsi {{ k }}">
+            <i class="fas fa-square-root-alt"></i> +Rumus
+          </button>
+        </div>
         <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; flex-shrink: 0; padding: 0.5rem 0.75rem; background: var(--light-100); border-radius: var(--radius-sm);">
           <input type="radio" name="correct_pg" value="{{ k }}" {% if correct_pg == k %}checked{% endif %} onchange="triggerLivePreview()">
           Kunci Benar
@@ -643,9 +673,14 @@
           {{ k }}
         </label>
         <input type="text" id="opt_kompleks_text_{{ k }}" name="opt_kompleks_text_{{ k }}" class="form-control" placeholder="Pernyataan {{ k }}" value="{{ k_opt_dict.get(k, '') }}" style="flex: 1; min-width: 200px;" oninput="triggerLivePreview()" onfocus="setTargetField('opt_kompleks_text_{{ k }}')">
-        <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('opt_kompleks_text_{{ k }}')" title="Tulis rumus/simbol untuk Pernyataan {{ k }}">
-          <i class="fas fa-square-root-alt"></i> +Rumus
-        </button>
+        <div style="display: flex; gap: 0.25rem; align-items: center;">
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('bold', 'opt_kompleks_text_{{ k }}')" title="Tebal (Ctrl+B)" style="border: 1px solid #cbd5e1; font-weight: 900; padding: 0.25rem 0.5rem; font-size: 0.8rem; line-height: 1.2;">B</button>
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('italic', 'opt_kompleks_text_{{ k }}')" title="Miring (Ctrl+I)" style="border: 1px solid #cbd5e1; font-style: italic; font-weight: 700; padding: 0.25rem 0.5rem; font-size: 0.8rem; line-height: 1.2;">I</button>
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('underline', 'opt_kompleks_text_{{ k }}')" title="Garis Bawah (Ctrl+U)" style="border: 1px solid #cbd5e1; text-decoration: underline; font-weight: 700; padding: 0.25rem 0.5rem; font-size: 0.8rem; line-height: 1.2;">U</button>
+          <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('opt_kompleks_text_{{ k }}')" title="Tulis rumus/simbol untuk Pernyataan {{ k }}">
+            <i class="fas fa-square-root-alt"></i> +Rumus
+          </button>
+        </div>
         <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; flex-shrink: 0; padding: 0.5rem 0.75rem; background: var(--light-100); border-radius: var(--radius-sm);">
           <input type="checkbox" name="correct_kompleks" value="{{ k }}" {% if k in correct_k %}checked{% endif %} onchange="triggerLivePreview()">
           Benar
@@ -684,13 +719,18 @@
     </h3>
 
     <div class="form-group">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.5rem;">
         <label class="form-label" for="explanation_text" style="margin-bottom: 0; font-weight: 700;">
           Teks Pembahasan / Langkah Penyelesaian
         </label>
-        <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('explanation_text')">
-          <i class="fas fa-square-root-alt"></i> Buka Equation
-        </button>
+        <div style="display: flex; gap: 0.35rem; align-items: center;">
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('bold', 'explanation_text')" title="Tebal (Ctrl+B)" style="border: 1px solid #cbd5e1; font-weight: 900; padding: 0.25rem 0.55rem; color: #1e293b;"><b>B</b></button>
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('italic', 'explanation_text')" title="Miring (Ctrl+I)" style="border: 1px solid #cbd5e1; font-style: italic; font-weight: 700; padding: 0.25rem 0.55rem; color: #1e293b;"><i>I</i></button>
+          <button type="button" class="btn btn-sm btn-light" onclick="applyFormat('underline', 'explanation_text')" title="Garis Bawah (Ctrl+U)" style="border: 1px solid #cbd5e1; text-decoration: underline; font-weight: 700; padding: 0.25rem 0.55rem; color: #1e293b;"><u>U</u></button>
+          <button type="button" class="ms-quick-btn" onclick="activateEquationTarget('explanation_text')">
+            <i class="fas fa-square-root-alt"></i> Buka Equation
+          </button>
+        </div>
       </div>
       <textarea id="explanation_text" name="explanation_text" class="form-control" rows="4" placeholder="Tuliskan analisis, langkah pengerjaan, atau rumus penyelesaian lengkap..." oninput="triggerLivePreview()" onfocus="setTargetField('explanation_text')">{{ question.explanation_text if question else '' }}</textarea>
     </div>
@@ -830,6 +870,78 @@ function switchEqTab(tabId) {
   if (window.MathJax && window.MathJax.typesetPromise) {
     window.MathJax.typesetPromise([targetPane]).catch(() => {});
   }
+}
+
+// Format Text: Bold, Italic, Underline
+function applyFormat(type, explicitTargetId) {
+  const targetId = explicitTargetId || activeTargetId;
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  const start = target.selectionStart || 0;
+  const end = target.selectionEnd || 0;
+  const selectedText = target.value.substring(start, end);
+  const val = target.value;
+  const textBefore = val.substring(0, start);
+  const textAfter = val.substring(end);
+
+  let tagOpen = '<b>';
+  let tagClose = '</b>';
+  let defaultText = 'teks tebal';
+
+  if (type === 'bold') {
+    tagOpen = '<b>'; tagClose = '</b>'; defaultText = 'teks tebal';
+  } else if (type === 'italic') {
+    tagOpen = '<i>'; tagClose = '</i>'; defaultText = 'teks miring';
+  } else if (type === 'underline') {
+    tagOpen = '<u>'; tagClose = '</u>'; defaultText = 'garis bawah';
+  }
+
+  if (selectedText.length > 0) {
+    if (selectedText.startsWith(tagOpen) && selectedText.endsWith(tagClose)) {
+      const unwrapped = selectedText.substring(tagOpen.length, selectedText.length - tagClose.length);
+      target.value = textBefore + unwrapped + textAfter;
+      target.focus();
+      target.setSelectionRange(start, start + unwrapped.length);
+    } else {
+      const wrapped = tagOpen + selectedText + tagClose;
+      target.value = textBefore + wrapped + textAfter;
+      target.focus();
+      target.setSelectionRange(start, start + wrapped.length);
+    }
+  } else {
+    const inserted = tagOpen + defaultText + tagClose;
+    target.value = textBefore + inserted + textAfter;
+    target.focus();
+    target.setSelectionRange(start + tagOpen.length, start + tagOpen.length + defaultText.length);
+  }
+
+  triggerLivePreview();
+}
+
+// Global Keyboard shortcuts: Ctrl+B (Bold), Ctrl+I (Italic), Ctrl+U (Underline)
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey || e.metaKey) {
+    const key = e.key.toLowerCase();
+    if (key === 'b' || key === 'i' || key === 'u') {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && active.type === 'text'))) {
+        e.preventDefault();
+        if (key === 'b') applyFormat('bold', active.id);
+        else if (key === 'i') applyFormat('italic', active.id);
+        else if (key === 'u') applyFormat('underline', active.id);
+      }
+    }
+  }
+});
+
+// Helper to format preview with Markdown & HTML
+function formatPreviewText(str) {
+  if (!str) return '';
+  let s = str;
+  s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  s = s.replace(/(?<!\*)\*([^\*\n]+?)\*(?!\*)/g, '<i>$1</i>');
+  return s;
 }
 
 // Smart Equation Inserter into Active Target Field
@@ -1055,7 +1167,8 @@ function triggerLivePreview() {
 
 function renderLivePreview() {
   // 1. Question Text
-  const qText = document.getElementById('question_text')?.value.trim() || '<i>(Teks butir soal kosong)</i>';
+  const rawQText = document.getElementById('question_text')?.value.trim() || '<i>(Teks butir soal kosong)</i>';
+  const qText = formatPreviewText(rawQText);
   const qPreview = document.getElementById('live-preview-question');
   if (qPreview) qPreview.innerHTML = qText;
 
@@ -1077,7 +1190,7 @@ function renderLivePreview() {
           <div style="width: 26px; height: 26px; border-radius: 50%; background: ${isCorrect ? 'var(--primary-600)' : 'var(--light-200)'}; color: ${isCorrect ? '#ffffff' : 'var(--text-main)'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0;">
             ${k}
           </div>
-          <div style="flex: 1; font-size: 0.95rem;">${textVal}</div>
+          <div style="flex: 1; font-size: 0.95rem;">${formatPreviewText(textVal)}</div>
           ${isCorrect ? '<span class="badge badge-success" style="font-size: 0.7rem;"><i class="fas fa-check"></i> Kunci</span>' : ''}
         `;
         optContainer.appendChild(item);
@@ -1092,7 +1205,7 @@ function renderLivePreview() {
           <div style="width: 24px; height: 24px; border-radius: 4px; background: ${isChecked ? 'var(--warning-500)' : 'var(--light-200)'}; color: ${isChecked ? '#ffffff' : 'var(--text-main)'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0;">
             ${isChecked ? '&check;' : k}
           </div>
-          <div style="flex: 1; font-size: 0.95rem;">${textVal}</div>
+          <div style="flex: 1; font-size: 0.95rem;">${formatPreviewText(textVal)}</div>
           ${isChecked ? '<span class="badge badge-warning" style="font-size: 0.7rem;">Kunci Benar</span>' : ''}
         `;
         optContainer.appendChild(item);
@@ -1110,7 +1223,8 @@ function renderLivePreview() {
   }
 
   // 3. Explanation Preview
-  const expText = document.getElementById('explanation_text')?.value.trim() || '<i>(Teks pembahasan belum diisi)</i>';
+  const rawExpText = document.getElementById('explanation_text')?.value.trim() || '<i>(Teks pembahasan belum diisi)</i>';
+  const expText = formatPreviewText(rawExpText);
   const expPreview = document.getElementById('live-preview-explanation');
   if (expPreview) expPreview.innerHTML = expText;
 

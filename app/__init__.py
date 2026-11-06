@@ -115,6 +115,44 @@ def create_app(config_override=None):
             return '-'
         return f"{float(value):.1f}"
 
+    @app.template_filter('format_text')
+    def format_text_filter(value):
+        if value is None:
+            return ""
+        text = str(value)
+        import re, html
+        from markupsafe import Markup
+
+        # 1. Protect math blocks ($...$ and $$...$$) from HTML escaping or markdown replacements
+        math_blocks = []
+        def save_math(m):
+            math_blocks.append(m.group(0))
+            return f"___MATH_BLOCK_{len(math_blocks)-1}___"
+
+        text = re.sub(r'\$\$.*?\$\$|\$.*?\$', save_math, text, flags=re.DOTALL)
+
+        # 2. Markdown formatting: **bold** and *italic*
+        text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+        text = re.sub(r'(?<!\*)\*([^\*\n]+?)\*(?!\*)', r'<i>\1</i>', text)
+
+        # 3. Sanitize HTML tags: allow only safe tags: b, i, u, strong, em, mark, sub, sup, br
+        def sanitize(match):
+            tag = match.group(0)
+            m = re.match(r'^<\s*(/?)\s*([a-zA-Z0-9]+)', tag)
+            if m:
+                slash, name = m.group(1), m.group(2).lower()
+                if name in {'b', 'strong', 'i', 'em', 'u', 'mark', 'sub', 'sup', 'br'}:
+                    return f"<{slash}{name}>" if slash else (f"<{name}>" if name != 'br' else "<br>")
+            return html.escape(tag)
+
+        text = re.sub(r'<[^>]+>', sanitize, text)
+
+        # 4. Restore math blocks
+        for i, mb in enumerate(math_blocks):
+            text = text.replace(f"___MATH_BLOCK_{i}___", mb)
+
+        return Markup(text)
+
     @login_manager.user_loader
     def load_user(user_id):
         from app.models import User

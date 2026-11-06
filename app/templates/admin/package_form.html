@@ -1,54 +1,57 @@
 {% extends "base.html" %}
 
-{% block title %}{% if package %}Edit Paket: {{ package.title }}{% else %}Buat Paket Tryout Baru{% endif %} - Admin BMP CBT{% endblock %}
+{% block title %}{% if package %}Edit Paket: {{ package.title }}{% else %}Buat Paket Tryout Baru{% endif %} - BMP CBT{% endblock %}
 
 {% block content %}
-<div style="max-width: 950px; margin: 0 auto 2rem auto;">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+<div style="max-width: 1050px; margin: 0 auto 3rem auto;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
     <div>
       <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
-        <i class="fas fa-folder-plus" style="color: var(--primary-600);"></i> {% if package %}Edit Paket Tryout{% else %}Buat Paket Tryout Baru{% endif %}
+        <i class="fas fa-boxes-stacked" style="color: var(--primary-600);"></i> {% if package %}Edit Paket Tryout{% else %}Buat Paket Tryout Baru{% endif %}
       </h1>
-      <p style="color: var(--text-muted); font-size: 0.9rem;">Atur durasi timer mandiri per subtes, jadwal buka/tutup, dan pilih butir-butir soal.</p>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">
+        Atur informasi paket, pilih subtes, tentukan kuota jumlah soal (min/max), dan pilih butir soal per subtes secara langsung.
+      </p>
     </div>
     <a href="{{ url_for('admin.packages') }}" class="btn btn-secondary">
-      <i class="fas fa-arrow-left"></i> Kembali
+      <i class="fas fa-arrow-left"></i> Kembali ke Daftar Paket
     </a>
   </div>
 
   <form method="POST" class="card" style="padding: 2rem;">
-    
-    <!-- Section 1: Package Basic Information -->
+    <!-- Section 1: Basic Information -->
     <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin-bottom: 1.25rem; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
-      <i class="fas fa-info-circle"></i> 1. Informasi Umum Paket
+      <i class="fas fa-info-circle"></i> 1. Informasi Dasar Paket Tryout
     </h3>
 
     <div class="form-group">
       <label class="form-label" for="title">Judul Paket Tryout <span style="color: var(--danger-500);">*</span></label>
-      <input type="text" id="title" name="title" class="form-control" placeholder="Contoh: Tryout Akbar UTBK-SNBT 2026 - Paket 1" value="{{ package.title if package else '' }}" required>
+      <input type="text" id="title" name="title" class="form-control" placeholder="Contoh: Tryout UTBK SNBT 2026 - Gelombang 1" value="{{ package.title if package else '' }}" required>
     </div>
 
     <div class="form-group">
-      <label class="form-label" for="description">Deskripsi & Petunjuk Pengerjaan</label>
-      <textarea id="description" name="description" class="form-control" rows="3" placeholder="Informasi singkat atau petunjuk umum bagi peserta...">{{ package.description if package else '' }}</textarea>
+      <label class="form-label" for="description">Deskripsi / Petunjuk Pengerjaan</label>
+      <textarea id="description" name="description" class="form-control" rows="3" placeholder="Tuliskan petunjuk pengerjaan, ketentuan penilaian, atau informasi tambahan untuk peserta...">{{ package.description if package else '' }}</textarea>
     </div>
 
     <div class="grid-2">
       <div class="form-group">
-        <label class="form-label" for="start_time">Jadwal Mulai Buka (Opsional)</label>
+        <label class="form-label" for="start_time">Jadwal Mulai Akses (Opsional)</label>
         <input type="datetime-local" id="start_time" name="start_time" class="form-control" value="{{ package.start_time | datetime_format('%Y-%m-%dT%H:%M') if package and package.start_time else '' }}">
+        <small style="color: var(--text-muted);">Biarkan kosong jika paket dapat dikerjakan kapan saja.</small>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="end_time">Jadwal Ditutup (Opsional)</label>
+        <label class="form-label" for="end_time">Jadwal Selesai / Ditutup (Opsional)</label>
         <input type="datetime-local" id="end_time" name="end_time" class="form-control" value="{{ package.end_time | datetime_format('%Y-%m-%dT%H:%M') if package and package.end_time else '' }}">
+        <small style="color: var(--text-muted);">Setelah waktu ini, ujian otomatis terkunci dan tidak bisa dimulai lagi.</small>
       </div>
     </div>
 
     <div class="form-group">
-      <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-weight: 600;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600;">
         <input type="checkbox" name="is_published" value="1" {% if package and package.is_published %}checked{% endif %}>
-        Publikasikan paket ini agar dapat dilihat & dikerjakan oleh peserta
+        Publikasikan paket ini agar dapat dilihat & dikerjakan oleh peserta di Katalog
       </label>
     </div>
 
@@ -59,76 +62,179 @@
         <option value="sequential" {% if package and not package.free_subtest_order %}selected{% endif %}>Berurutan: mengikuti urutan subtes di paket (simulasi UTBK resmi)</option>
       </select>
       <small style="color: var(--text-muted); display: block; margin-top: 0.4rem;">
-        Pada kedua mode, peserta memilih subtes dari menu, hanya satu subtes berjalan dalam satu waktu, dan tryout boleh diselesaikan tanpa mengerjakan semua subtes (tanpa peringkat).
+        Pada kedua mode, peserta memilih subtes dari menu, hanya satu subtes berjalan dalam satu waktu, dan tryout boleh diselesaikan tanpa mengerjakan semua subtes.
       </small>
     </div>
 
-    <!-- Section 2: Subtests & Independent Timers -->
-    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 2rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
-      <i class="fas fa-stopwatch"></i> 2. Pilih Subtes (Tier 2) & Atur Timer Mandiri per Subtes
+    <!-- Section 2: Subtests, Question Selection & Quantities -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 2.25rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
+      <i class="fas fa-stopwatch"></i> 2. Pilih Subtes, Atur Kuota Soal & Butir Soal per Subtes
     </h3>
-    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-      Centang subtes yang ingin dimasukkan ke dalam paket ujian ini, lalu tentukan <b>durasi timer countdown (menit)</b> untuk masing-masing subtes.
+    <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+      Centang subtes yang diujikan. Anda dapat langsung <b>menentukan jumlah soal (min/max)</b> dan <b>memilih butir soal yang tersedia</b> untuk subtes tersebut.
     </p>
 
-    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
+    <!-- Subtests List -->
+    <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
       {% for s in subtests %}
       {% set is_selected = s.id in selected_subtest_ids %}
       {% set custom_duration = subtest_durations.get(s.id, s.default_duration_minutes) if subtest_durations else s.default_duration_minutes %}
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: var(--light-50); border: 1px solid var(--light-200); padding: 0.85rem 1.25rem; border-radius: var(--radius-md);">
-        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 700; flex: 1; min-width: 250px;">
-          <input type="checkbox" name="subtest_ids" value="{{ s.id }}" class="subtest-checkbox" data-subtest-id="{{ s.id }}" {% if is_selected %}checked{% endif %}>
-          <div>
-            <div>{{ s.name }}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">
-              {{ s.test_group.name }} &bull; Tersedia {{ s.questions.count() }} Soal di Bank
-            </div>
-          </div>
-        </label>
-
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <label style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap;">Timer Subtes:</label>
-          <input type="number" name="duration_{{ s.id }}" class="form-control" style="width: 90px; text-align: center;" value="{{ custom_duration }}" min="1">
-          <span style="font-size: 0.85rem; color: var(--text-muted);">Menit</span>
-        </div>
-      </div>
+      {% set subtest_q_list = questions_by_subtest.get(s.id, []) if questions_by_subtest else [] %}
+      {% set available_count = subtest_q_list|length %}
+      
+      {# Calculate how many questions are already selected for this subtest #}
+      {% set selected_count = namespace(val=0) %}
+      {% for q in subtest_q_list %}
+        {% if q.id in selected_question_ids %}
+          {% set selected_count.val = selected_count.val + 1 %}
+        {% endif %}
       {% endfor %}
-    </div>
 
-    <!-- Section 3: Select Questions from Question Bank -->
-    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-700); margin: 2rem 0 1.25rem 0; border-bottom: 1px solid var(--light-200); padding-bottom: 0.5rem;">
-      <i class="fas fa-tasks"></i> 3. Pilih Butir Soal yang Diujikan
-    </h3>
-    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-      Pilih butir soal yang akan ditampilkan kepada peserta saat mengerjakan paket ini.
-    </p>
+      <div class="subtest-card-wrapper" id="subtest_wrapper_{{ s.id }}">
+        
+        <!-- Subtest Header Row -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: var(--light-50); border: 2px solid {% if is_selected %}var(--primary-300){% else %}var(--light-200){% endif %}; padding: 1rem 1.25rem; border-radius: var(--radius-md); transition: all 0.2s ease;" id="subtest_header_{{ s.id }}">
+          
+          <!-- Subtest Checkbox & Info -->
+          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 700; flex: 1; min-width: 250px; margin-bottom: 0;">
+            <input type="checkbox" name="subtest_ids" value="{{ s.id }}" id="subtest_check_{{ s.id }}" class="subtest-checkbox" data-subtest-id="{{ s.id }}" {% if is_selected %}checked{% endif %} onchange="handleSubtestToggle({{ s.id }})" style="width: 20px; height: 20px; cursor: pointer;">
+            <div>
+              <div style="font-size: 1rem; color: var(--text-main);">{{ s.name }}</div>
+              <div style="font-size: 0.775rem; color: var(--text-muted); font-weight: 500;">
+                {{ s.test_group.name }} &bull; Tersedia <b style="color: var(--primary-700);">{{ available_count }} Soal</b> di Bank
+              </div>
+            </div>
+          </label>
 
-    <div style="max-height: 450px; overflow-y: auto; border: 1px solid var(--light-200); border-radius: var(--radius-md); padding: 1rem; background: var(--light-50);">
-      {% for q in questions %}
-      {% set is_q_selected = q.id in selected_question_ids %}
-      <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; border-bottom: 1px solid var(--light-200); background: white; margin-bottom: 0.5rem; border-radius: var(--radius-sm);">
-        <input type="checkbox" name="question_ids" value="{{ q.id }}" {% if is_q_selected %}checked{% endif %} style="margin-top: 0.3rem;">
-        <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-            <span class="badge badge-primary">#{{ q.id }}</span>
-            <span class="badge badge-neutral">{{ q.subtest.name if q.subtest else '-' }}</span>
-            <span class="badge badge-{% if q.question_type == 'pg' %}primary{% elif q.question_type == 'pg_kompleks' %}warning{% else %}success{% endif %}">
-              {{ q.question_type }}
+          <!-- Middle: JUMLAH SOAL Control (Gambar 2) -->
+          <div style="display: flex; align-items: center; gap: 0.5rem; background: #ffffff; padding: 0.4rem 0.85rem; border: 1px solid var(--light-300); border-radius: var(--radius-sm); box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <label style="font-size: 0.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 0; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px;">
+              Jumlah Soal:
+            </label>
+            <input type="number" 
+                   id="qcount_input_{{ s.id }}" 
+                   class="form-control form-control-sm qcount-input" 
+                   style="width: 75px; text-align: center; font-weight: 800; color: var(--primary-800); font-size: 0.95rem; border: 1.5px solid var(--primary-300);" 
+                   min="{% if available_count > 0 %}1{% else %}0{% endif %}" 
+                   max="{{ available_count }}" 
+                   value="{{ selected_count.val if is_selected else (available_count if is_selected else 0) }}"
+                   {% if available_count == 0 %}disabled{% endif %}
+                   data-subtest-id="{{ s.id }}"
+                   data-max="{{ available_count }}"
+                   onchange="handleManualCountChange({{ s.id }}, this.value)"
+                   title="Konfigurasi Jumlah Soal (Minimal: {% if available_count > 0 %}1{% else %}0{% endif %}, Maksimal: {{ available_count }})">
+            <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">
+              (Min: {% if available_count > 0 %}1{% else %}0{% endif %}, Maks: {{ available_count }})
             </span>
           </div>
-          <div style="font-size: 0.9rem; color: var(--text-main); font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-            {{ q.question_text }}
+
+          <!-- Right: Timer Subtes -->
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; margin-bottom: 0; font-weight: 600;">Timer Subtes:</label>
+            <input type="number" id="duration_{{ s.id }}" name="duration_{{ s.id }}" class="form-control subtest-duration-input" style="width: 75px; text-align: center; font-weight: 700;" value="{{ custom_duration }}" min="1" oninput="updateSummary()">
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Menit</span>
           </div>
+
+          <!-- Drawer Toggle Button -->
+          <button type="button" class="btn btn-sm btn-light" id="drawer_btn_{{ s.id }}" onclick="toggleDrawer({{ s.id }})" style="display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid var(--light-300); font-size: 0.8rem; font-weight: 700; color: var(--primary-800); background: #ffffff;">
+            <i class="fas fa-list-check" style="color: var(--primary-600);"></i>
+            <span>Pilih Soal (<b id="drawer_badge_{{ s.id }}">{{ selected_count.val }}</b>)</span>
+            <i id="drawer_arrow_{{ s.id }}" class="fas fa-chevron-{% if is_selected %}up{% else %}down{% endif %}"></i>
+          </button>
         </div>
-      </div>
-      {% else %}
-      <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
-        Belum ada butir soal di Bank Soal. Tambahkan soal melalui Portal Supervisor terlebih dahulu.
+
+        <!-- Question Drawer (Directly under subtest row - Gambar 1) -->
+        <div id="drawer_{{ s.id }}" class="subtest-drawer" style="display: {% if is_selected %}block{% else %}none{% endif %}; background: #ffffff; border: 2px solid var(--primary-300); border-top: none; border-radius: 0 0 var(--radius-md) var(--radius-md); padding: 1.25rem; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+          
+          <!-- Toolbar in Drawer -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.85rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--light-200);">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 260px;">
+              <i class="fas fa-search" style="color: var(--text-muted);"></i>
+              <input type="text" placeholder="Cari teks soal / topik di subtes ini..." class="form-control form-control-sm" style="max-width: 320px;" oninput="filterSubtestQuestions({{ s.id }}, this.value)">
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllInSubtest({{ s.id }})" {% if available_count == 0 %}disabled{% endif %}>
+                <i class="fas fa-check-double"></i> Pilih Semua ({{ available_count }})
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllInSubtest({{ s.id }})" {% if available_count == 0 %}disabled{% endif %}>
+                <i class="fas fa-times"></i> Kosongkan
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-info" onclick="promptRandomSelection({{ s.id }})" {% if available_count == 0 %}disabled{% endif %}>
+                <i class="fas fa-random"></i> Pilih Acak N Soal
+              </button>
+            </div>
+          </div>
+
+          <!-- Questions List -->
+          {% if available_count > 0 %}
+          <div id="q_list_{{ s.id }}" style="max-height: 380px; overflow-y: auto; padding-right: 0.4rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            {% for q in subtest_q_list %}
+            {% set is_q_checked = q.id in selected_question_ids %}
+            <div class="q-item-card q-sub-item-{{ s.id }}" data-question-id="{{ q.id }}" data-text="{{ q.question_text|lower }}" data-topic="{{ q.topic.name|lower if q.topic else '' }}" style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 1rem; border: 1px solid {% if is_q_checked %}var(--primary-300){% else %}var(--light-200){% endif %}; background: {% if is_q_checked %}var(--primary-50){% else %}#ffffff{% endif %}; border-radius: var(--radius-sm); transition: all 0.15s ease;">
+              
+              <input type="checkbox" 
+                     name="question_ids" 
+                     value="{{ q.id }}" 
+                     id="q_check_{{ q.id }}" 
+                     class="q-check-box q-check-sub-{{ s.id }}" 
+                     data-subtest-id="{{ s.id }}" 
+                     {% if is_q_checked %}checked{% endif %} 
+                     onchange="onQuestionCheckToggle({{ s.id }}, this)" 
+                     style="margin-top: 0.35rem; width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+              
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+                  <span class="badge badge-primary" style="font-weight: 700;">#{{ q.id }}</span>
+                  <span class="badge badge-neutral">{{ q.topic.name if q.topic else 'Tanpa Topik' }}</span>
+                  <span class="badge badge-{% if q.question_type == 'pg' %}primary{% elif q.question_type == 'pg_kompleks' %}warning{% else %}success{% endif %}">
+                    {{ 'Pilihan Ganda' if q.question_type == 'pg' else ('PG Kompleks' if q.question_type == 'pg_kompleks' else 'Isian') }}
+                  </span>
+                  <span class="badge badge-{% if q.difficulty_level == 'mudah' %}success{% elif q.difficulty_level == 'sedang' %}warning{% else %}danger{% endif %}">
+                    {{ q.difficulty_level }}
+                  </span>
+                </div>
+
+                <div class="question-snippet" style="font-size: 0.925rem; color: var(--text-main); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line;">
+                  {{ q.question_text | format_text }}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div style="text-align: center; color: var(--text-muted); padding: 1.5rem; background: var(--light-50); border-radius: var(--radius-sm);">
+            <i class="fas fa-info-circle" style="color: var(--primary-500); font-size: 1.25rem; display: block; margin-bottom: 0.5rem;"></i>
+            Belum ada butir soal di Bank Soal untuk subtes ini. Silakan buat butir soal baru terlebih dahulu di Portal SPV.
+          </div>
+          {% endif %}
+
+        </div>
+
       </div>
       {% endfor %}
     </div>
 
-    <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+    <!-- Live Package Summary Banner -->
+    <div style="background: linear-gradient(135deg, var(--primary-50) 0%, #ffffff 100%); border: 2px solid var(--primary-300); border-radius: var(--radius-md); padding: 1.25rem 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <div style="font-size: 0.8rem; font-weight: 800; color: var(--primary-800); text-transform: uppercase; letter-spacing: 0.5px;">
+          <i class="fas fa-chart-pie"></i> Ringkasan Konfigurasi Paket:
+        </div>
+        <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">
+          <span id="summary_subtests_count" style="color: var(--primary-700);">0</span> Subtes Aktif &bull;
+          <span id="summary_questions_count" style="color: var(--success-700);">0</span> Butir Soal Siap Diujikan &bull;
+          Total Waktu: <span id="summary_total_time" style="color: var(--primary-800);">0</span> Menit
+        </div>
+      </div>
+
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        <i class="fas fa-check-circle" style="color: var(--success-600);"></i> Siap disimpan ke bank paket tryout
+      </div>
+    </div>
+
+    <!-- Submit Buttons -->
+    <div style="display: flex; justify-content: flex-end; gap: 1rem;">
       <a href="{{ url_for('admin.packages') }}" class="btn btn-secondary">Batal</a>
       <button type="submit" class="btn btn-primary btn-lg">
         <i class="fas fa-save"></i> {% if package %}Simpan Perubahan Paket{% else %}Buat & Simpan Paket{% endif %}
@@ -136,4 +242,279 @@
     </div>
   </form>
 </div>
+
+<script>
+// =========================================================================
+// SUBTEST & QUESTION INTERACTIVE CONTROLLER
+// =========================================================================
+
+function toggleDrawer(subtestId) {
+  const drawer = document.getElementById(`drawer_${subtestId}`);
+  const arrow = document.getElementById(`drawer_arrow_${subtestId}`);
+  if (!drawer) return;
+
+  const isClosed = (drawer.style.display === 'none' || drawer.style.display === '');
+  drawer.style.display = isClosed ? 'block' : 'none';
+  if (arrow) {
+    arrow.className = isClosed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+  }
+}
+
+function handleSubtestToggle(subtestId) {
+  const check = document.getElementById(`subtest_check_${subtestId}`);
+  const drawer = document.getElementById(`drawer_${subtestId}`);
+  const header = document.getElementById(`subtest_header_${subtestId}`);
+  const qCountInput = document.getElementById(`qcount_input_${subtestId}`);
+  const maxAvailable = parseInt(qCountInput?.dataset?.max || '0', 10);
+
+  if (check.checked) {
+    // Open drawer
+    if (drawer) drawer.style.display = 'block';
+    const arrow = document.getElementById(`drawer_arrow_${subtestId}`);
+    if (arrow) arrow.className = 'fas fa-chevron-up';
+    if (header) header.style.borderColor = 'var(--primary-300)';
+
+    // If currently 0 questions selected, auto-select all (or min 1)
+    const currentCount = parseInt(qCountInput?.value || '0', 10);
+    if (currentCount === 0 && maxAvailable > 0) {
+      selectAllInSubtest(subtestId);
+    }
+  } else {
+    // Close drawer & uncheck questions
+    if (drawer) drawer.style.display = 'none';
+    const arrow = document.getElementById(`drawer_arrow_${subtestId}`);
+    if (arrow) arrow.className = 'fas fa-chevron-down';
+    if (header) header.style.borderColor = 'var(--light-200)';
+
+    deselectAllInSubtest(subtestId);
+  }
+
+  updateSummary();
+}
+
+function handleManualCountChange(subtestId, inputVal) {
+  const qCountInput = document.getElementById(`qcount_input_${subtestId}`);
+  const maxAvailable = parseInt(qCountInput?.dataset?.max || '0', 10);
+  let targetCount = parseInt(inputVal, 10);
+
+  if (isNaN(targetCount) || targetCount < 0) targetCount = 0;
+  if (targetCount > maxAvailable) targetCount = maxAvailable;
+
+  // Update input with clamped value
+  qCountInput.value = targetCount;
+
+  // Auto-check subtest if count > 0
+  const subCheck = document.getElementById(`subtest_check_${subtestId}`);
+  if (targetCount > 0 && subCheck && !subCheck.checked) {
+    subCheck.checked = true;
+    const drawer = document.getElementById(`drawer_${subtestId}`);
+    if (drawer) drawer.style.display = 'block';
+    const arrow = document.getElementById(`drawer_arrow_${subtestId}`);
+    if (arrow) arrow.className = 'fas fa-chevron-up';
+    const header = document.getElementById(`subtest_header_${subtestId}`);
+    if (header) header.style.borderColor = 'var(--primary-300)';
+  } else if (targetCount === 0 && subCheck && subCheck.checked) {
+    subCheck.checked = false;
+    const drawer = document.getElementById(`drawer_${subtestId}`);
+    if (drawer) drawer.style.display = 'none';
+    const arrow = document.getElementById(`drawer_arrow_${subtestId}`);
+    if (arrow) arrow.className = 'fas fa-chevron-down';
+  }
+
+  // Select the first targetCount questions
+  const checkboxes = document.querySelectorAll(`.q-check-sub-${subtestId}`);
+  checkboxes.forEach((cb, index) => {
+    cb.checked = (index < targetCount);
+    updateCardHighlight(cb);
+  });
+
+  // Update drawer badge
+  const badge = document.getElementById(`drawer_badge_${subtestId}`);
+  if (badge) badge.textContent = targetCount;
+
+  updateSummary();
+}
+
+function onQuestionCheckToggle(subtestId, changedCheckbox) {
+  if (changedCheckbox) {
+    updateCardHighlight(changedCheckbox);
+  }
+
+  const checkedCount = document.querySelectorAll(`.q-check-sub-${subtestId}:checked`).length;
+  const qCountInput = document.getElementById(`qcount_input_${subtestId}`);
+  if (qCountInput) {
+    qCountInput.value = checkedCount;
+  }
+
+  const badge = document.getElementById(`drawer_badge_${subtestId}`);
+  if (badge) badge.textContent = checkedCount;
+
+  const subCheck = document.getElementById(`subtest_check_${subtestId}`);
+  if (checkedCount > 0 && subCheck && !subCheck.checked) {
+    subCheck.checked = true;
+    const header = document.getElementById(`subtest_header_${subtestId}`);
+    if (header) header.style.borderColor = 'var(--primary-300)';
+  } else if (checkedCount === 0 && subCheck && subCheck.checked) {
+    // If no questions selected, keep subtest check synced
+    subCheck.checked = false;
+    const header = document.getElementById(`subtest_header_${subtestId}`);
+    if (header) header.style.borderColor = 'var(--light-200)';
+  }
+
+  updateSummary();
+}
+
+function updateCardHighlight(cb) {
+  const card = cb.closest('.q-item-card');
+  if (card) {
+    if (cb.checked) {
+      card.style.borderColor = 'var(--primary-300)';
+      card.style.background = 'var(--primary-50)';
+    } else {
+      card.style.borderColor = 'var(--light-200)';
+      card.style.background = '#ffffff';
+    }
+  }
+}
+
+function selectAllInSubtest(subtestId) {
+  const checkboxes = document.querySelectorAll(`.q-check-sub-${subtestId}`);
+  checkboxes.forEach(cb => {
+    cb.checked = true;
+    updateCardHighlight(cb);
+  });
+
+  const subCheck = document.getElementById(`subtest_check_${subtestId}`);
+  if (subCheck) subCheck.checked = true;
+
+  const header = document.getElementById(`subtest_header_${subtestId}`);
+  if (header) header.style.borderColor = 'var(--primary-300)';
+
+  const qCountInput = document.getElementById(`qcount_input_${subtestId}`);
+  if (qCountInput) qCountInput.value = checkboxes.length;
+
+  const badge = document.getElementById(`drawer_badge_${subtestId}`);
+  if (badge) badge.textContent = checkboxes.length;
+
+  updateSummary();
+}
+
+function deselectAllInSubtest(subtestId) {
+  const checkboxes = document.querySelectorAll(`.q-check-sub-${subtestId}`);
+  checkboxes.forEach(cb => {
+    cb.checked = false;
+    updateCardHighlight(cb);
+  });
+
+  const qCountInput = document.getElementById(`qcount_input_${subtestId}`);
+  if (qCountInput) qCountInput.value = 0;
+
+  const badge = document.getElementById(`drawer_badge_${subtestId}`);
+  if (badge) badge.textContent = 0;
+
+  updateSummary();
+}
+
+function promptRandomSelection(subtestId) {
+  const qCountInput = document.getElementById(`qcount_input_${subtestId}`);
+  const maxAvailable = parseInt(qCountInput?.dataset?.max || '0', 10);
+  if (maxAvailable === 0) return;
+
+  const currentVal = parseInt(qCountInput.value || '1', 10) || Math.min(5, maxAvailable);
+  const userN = prompt(`Masukkan jumlah butir soal acak untuk subtes ini (1 - ${maxAvailable}):`, currentVal);
+  if (!userN) return;
+
+  const n = parseInt(userN, 10);
+  if (isNaN(n) || n < 1) {
+    alert('Jumlah butir soal minimal adalah 1.');
+    return;
+  }
+  const countToPick = Math.min(n, maxAvailable);
+
+  const checkboxes = Array.from(document.querySelectorAll(`.q-check-sub-${subtestId}`));
+  // Shuffle indices
+  const shuffled = checkboxes.slice().sort(() => 0.5 - Math.random());
+  checkboxes.forEach(cb => { cb.checked = false; });
+  shuffled.slice(0, countToPick).forEach(cb => { cb.checked = true; });
+
+  checkboxes.forEach(cb => updateCardHighlight(cb));
+
+  const subCheck = document.getElementById(`subtest_check_${subtestId}`);
+  if (subCheck) subCheck.checked = true;
+
+  const header = document.getElementById(`subtest_header_${subtestId}`);
+  if (header) header.style.borderColor = 'var(--primary-300)';
+
+  qCountInput.value = countToPick;
+  const badge = document.getElementById(`drawer_badge_${subtestId}`);
+  if (badge) badge.textContent = countToPick;
+
+  updateSummary();
+}
+
+function filterSubtestQuestions(subtestId, query) {
+  const q = (query || '').toLowerCase().trim();
+  const items = document.querySelectorAll(`.q-sub-item-${subtestId}`);
+  items.forEach(item => {
+    const text = item.getAttribute('data-text') || '';
+    const topic = item.getAttribute('data-topic') || '';
+    const id = item.getAttribute('data-question-id') || '';
+    if (!q || text.includes(q) || topic.includes(q) || id.includes(q)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+}
+
+function updateSummary() {
+  const activeSubtests = document.querySelectorAll('.subtest-checkbox:checked');
+  const subtestCount = activeSubtests.length;
+
+  let totalQuestions = 0;
+  let totalMinutes = 0;
+
+  activeSubtests.forEach(subCb => {
+    const sid = subCb.value;
+    const qCount = document.querySelectorAll(`.q-check-sub-${sid}:checked`).length;
+    totalQuestions += qCount;
+
+    const durInput = document.getElementById(`duration_${sid}`);
+    const dur = parseInt(durInput?.value || '0', 10);
+    totalMinutes += dur;
+  });
+
+  const sumSub = document.getElementById('summary_subtests_count');
+  const sumQ = document.getElementById('summary_questions_count');
+  const sumTime = document.getElementById('summary_total_time');
+
+  if (sumSub) sumSub.textContent = subtestCount;
+  if (sumQ) sumQ.textContent = totalQuestions;
+  if (sumTime) sumTime.textContent = totalMinutes;
+}
+
+// Initial calculation on page load
+document.addEventListener('DOMContentLoaded', () => {
+  // Sync each subtest drawer and counts
+  document.querySelectorAll('.subtest-checkbox').forEach(cb => {
+    const sid = cb.value;
+    const checkedQ = document.querySelectorAll(`.q-check-sub-${sid}:checked`).length;
+    const qCountInput = document.getElementById(`qcount_input_${sid}`);
+    if (qCountInput) {
+      qCountInput.value = checkedQ;
+    }
+    const badge = document.getElementById(`drawer_badge_${sid}`);
+    if (badge) {
+      badge.textContent = checkedQ;
+    }
+  });
+
+  updateSummary();
+
+  // Typeset MathJax in question snippets if loaded
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise().catch(() => {});
+  }
+});
+</script>
 {% endblock %}

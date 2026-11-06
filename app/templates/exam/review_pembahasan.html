@@ -68,7 +68,7 @@
 
         <!-- Question Text -->
         <div style="font-size: 1rem; line-height: 1.7; color: var(--text-main); margin-bottom: 1.25rem;">
-          {{ q.question_text }}
+          {{ q.question_text | format_text }}
         </div>
 
         {% if q.question_image %}
@@ -98,7 +98,7 @@
           </h4>
           
           <div style="font-size: 0.925rem; line-height: 1.7; color: var(--dark-900); white-space: pre-line;">
-            {{ q.explanation_text or 'Pembahasan teks belum tersedia untuk soal ini.' }}
+            {{ (q.explanation_text | format_text) or 'Pembahasan teks belum tersedia untuk soal ini.' }}
           </div>
 
           {% if q.explanation_image %}

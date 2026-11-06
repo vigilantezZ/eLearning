@@ -384,27 +384,43 @@ def package_new():
             )
             db.session.add(ts)
 
-        # Question IDs selection
-        question_ids = request.form.getlist('question_ids')
-        for q_order, q_id in enumerate(question_ids, start=1):
+        # Question IDs selection (filtered by chosen subtests)
+        selected_subtest_ids_set = {int(sid) for sid in subtest_ids if sid.isdigit()}
+        raw_q_ids = [int(qid) for qid in request.form.getlist('question_ids') if qid.isdigit()]
+
+        valid_questions = []
+        if raw_q_ids and selected_subtest_ids_set:
+            valid_questions = Question.query.filter(
+                Question.id.in_(raw_q_ids),
+                Question.subtest_id.in_(selected_subtest_ids_set)
+            ).all()
+            sub_order_map = {sid: idx for idx, sid in enumerate(subtest_ids, 1)}
+            valid_questions.sort(key=lambda q: (sub_order_map.get(str(q.subtest_id), 999), q.id))
+
+        for q_order, q in enumerate(valid_questions, start=1):
             tq = TryoutQuestion(
                 tryout_package_id=pkg.id,
-                question_id=int(q_id),
+                question_id=q.id,
                 order_num=q_order
             )
             db.session.add(tq)
 
         db.session.commit()
-        flash(f"Paket Tryout '{title}' berhasil dibuat dengan {len(question_ids)} butir soal!", 'success')
+        flash(f"Paket Tryout '{title}' berhasil dibuat dengan {len(valid_questions)} butir soal!", 'success')
         return redirect(url_for('admin.packages'))
 
     all_subtests = Subtest.query.order_by(Subtest.order_num).all()
     all_questions = Question.query.order_by(Question.subtest_id, Question.id).all()
+    questions_by_subtest = {}
+    for q in all_questions:
+        questions_by_subtest.setdefault(q.subtest_id, []).append(q)
+
     return render_template(
         'admin/package_form.html',
         package=None,
         subtests=all_subtests,
         questions=all_questions,
+        questions_by_subtest=questions_by_subtest,
         selected_subtest_ids=[],
         selected_question_ids=[]
     )
@@ -439,23 +455,38 @@ def package_edit(package_id):
             )
             db.session.add(ts)
 
-        # Re-sync questions
+        # Re-sync questions (filtered by chosen subtests)
         TryoutQuestion.query.filter_by(tryout_package_id=pkg.id).delete()
-        question_ids = request.form.getlist('question_ids')
-        for q_order, q_id in enumerate(question_ids, start=1):
+        selected_subtest_ids_set = {int(sid) for sid in subtest_ids if sid.isdigit()}
+        raw_q_ids = [int(qid) for qid in request.form.getlist('question_ids') if qid.isdigit()]
+
+        valid_questions = []
+        if raw_q_ids and selected_subtest_ids_set:
+            valid_questions = Question.query.filter(
+                Question.id.in_(raw_q_ids),
+                Question.subtest_id.in_(selected_subtest_ids_set)
+            ).all()
+            sub_order_map = {sid: idx for idx, sid in enumerate(subtest_ids, 1)}
+            valid_questions.sort(key=lambda q: (sub_order_map.get(str(q.subtest_id), 999), q.id))
+
+        for q_order, q in enumerate(valid_questions, start=1):
             tq = TryoutQuestion(
                 tryout_package_id=pkg.id,
-                question_id=int(q_id),
+                question_id=q.id,
                 order_num=q_order
             )
             db.session.add(tq)
 
         db.session.commit()
-        flash(f"Paket Tryout '{pkg.title}' berhasil diperbarui!", 'success')
+        flash(f"Paket Tryout '{pkg.title}' berhasil diperbarui dengan {len(valid_questions)} butir soal!", 'success')
         return redirect(url_for('admin.packages'))
 
     all_subtests = Subtest.query.order_by(Subtest.order_num).all()
     all_questions = Question.query.order_by(Question.subtest_id, Question.id).all()
+    questions_by_subtest = {}
+    for q in all_questions:
+        questions_by_subtest.setdefault(q.subtest_id, []).append(q)
+
     selected_subtest_ids = [ts.subtest_id for ts in pkg.package_subtests]
     selected_question_ids = [tq.question_id for tq in pkg.package_questions]
     subtest_durations = {ts.subtest_id: ts.duration_minutes for ts in pkg.package_subtests}
@@ -465,6 +496,7 @@ def package_edit(package_id):
         package=pkg,
         subtests=all_subtests,
         questions=all_questions,
+        questions_by_subtest=questions_by_subtest,
         selected_subtest_ids=selected_subtest_ids,
         selected_question_ids=selected_question_ids,
         subtest_durations=subtest_durations
